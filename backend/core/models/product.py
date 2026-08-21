@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 
 class NutritionFact(BaseModel):
@@ -6,25 +6,37 @@ class NutritionFact(BaseModel):
     unit: str
 
 class NutritionInfo(BaseModel):
-    calories: Optional[NutritionFact] = None
-    protein: Optional[NutritionFact] = None
-    carbohydrates: Optional[NutritionFact] = None
-    added_sugar: Optional[NutritionFact] = None
-    fiber: Optional[NutritionFact] = None
+    calories: Optional[NutritionFact]
+    protein: Optional[NutritionFact]
+    carbohydrates: Optional[NutritionFact]
+    added_sugar: Optional[NutritionFact]
+    fiber: Optional[NutritionFact]
+    sodium: Optional[NutritionFact]
+    saturated_fat: Optional[NutritionFact]
 
 class ProductBase(BaseModel):
     name: str
     brand: str
     category: str
-    price: Optional[float] = None
+    price: Optional[float]
+
+class ClaimVerdict(BaseModel):
+    claim: str
+    status: str # "VERIFIED", "DECEPTIVE", "MISLEADING"
+    reasoning: str
+
+class TrueLabelAuditResult(BaseModel):
+    product_name: str
+    overall_trust_score: int # 0-100
+    verdicts: List[ClaimVerdict]
 
 class ExtractedProductData(ProductBase):
     """
     Data Transfer Object (DTO) representing the structured output
     expected from the Gemini Vision OCR service.
     """
-    ingredients: List[str] = Field(default_factory=list, description="Parsed list of ingredients")
-    claims: List[str] = Field(default_factory=list, description="Marketing claims found on packaging")
+    ingredients: List[str]
+    claims: List[str]
     nutrition: NutritionInfo
 
 class FoodDecisionProfile(BaseModel):
@@ -33,6 +45,6 @@ class FoodDecisionProfile(BaseModel):
     """
     nutritional_quality_score: int
     processing_score: int
-    value_score: Optional[int] = None
+    value_score: Optional[int]
     overall_recommendation: str
     reasoning: str
