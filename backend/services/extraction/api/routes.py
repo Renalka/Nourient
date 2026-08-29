@@ -31,22 +31,37 @@ Extract the details meticulously and return them strictly in the following JSON 
   "brand": "Brand Name (or empty string)",
   "category": "Category like Cereal, Snack, etc (or empty string)",
   "price": null,
-  "ingredients": ["ingredient 1", "ingredient 2"],
+  "ingredients": [
+    {
+      "name": "Clean Ingredient Name",
+      "ins_code": "INS 330 or E330 or null if not an additive code",
+      "percentage": 10.5
+    }
+  ],
   "claims": ["claim 1", "claim 2"],
   "nutrition": {
     "calories": {"amount": 0, "unit": "kcal"},
     "protein": {"amount": 0.0, "unit": "g"},
     "carbohydrates": {"amount": 0.0, "unit": "g"},
-    "added_sugar": {"amount": 0.0, "unit": "g"},
+    "sugar": {"amount": 0.0, "unit": "g"},
     "fiber": {"amount": 0.0, "unit": "g"},
     "sodium": {"amount": 0.0, "unit": "mg"},
     "saturated_fat": {"amount": 0.0, "unit": "g"}
   }
 }
 
-If a specific nutrition value is not visible, use {"amount": 0, "unit": ""} for it.
-Always attempt to normalize values to per 100g if both serving and 100g are visible.
-Do not hallucinate or guess. Return ONLY valid JSON.
+CRITICAL INSTRUCTIONS FOR INGREDIENTS:
+1. Extract a clean, deduplicated list of ingredients.
+2. If an ingredient has a quantity (like percentages mentioned in brackets e.g. "Wheat Flour (60%)"), extract the percentage value as a float.
+3. If an ingredient contains an INS code or E-number (e.g. "Acidity Regulator (INS 330)"), put "INS 330" in `ins_code` and put "Acidity Regulator" in `name`. Do not leave the INS code inside the name.
+
+CRITICAL INSTRUCTIONS FOR NUTRITION FACTS:
+1. You MUST extract values strictly "per 100g" or "per 100ml". 
+2. If the nutrition table has multiple columns (e.g., "Per Serving" and "Per 100g"), you MUST ONLY look at the "Per 100g" column. Ignore the serving column completely to avoid confusion.
+3. If the label ONLY shows "Per Serving" (e.g. per 30g), you MUST mathematically convert the values to 100g (e.g. multiply by 3.33) and return the 100g values.
+4. For sugar, extract Total Sugars. 
+5. If a specific nutrition value is completely missing, use {"amount": 0, "unit": ""} for it.
+Do not hallucinate. Return ONLY valid JSON.
 """
 
 @router.post("/extract", response_model=ExtractedProductData)

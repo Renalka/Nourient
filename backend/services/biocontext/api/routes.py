@@ -24,3 +24,16 @@ async def evaluate_context(payload: BioContextPayload):
     except Exception as e:
         logger.error(f"BioContext failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+class ProfileUpdatePayload(BaseModel):
+    user_id: str
+    health_profile: str
+
+@router.post("/update_profile")
+async def update_profile(payload: ProfileUpdatePayload):
+    try:
+        engine.update_user_profile(payload.user_id, payload.health_profile)
+        return {"status": "success", "message": f"Updated profile to {payload.health_profile}"}
+    except Exception as e:
+        logger.error(f"Failed to update profile: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

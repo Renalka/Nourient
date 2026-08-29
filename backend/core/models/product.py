@@ -9,7 +9,7 @@ class NutritionInfo(BaseModel):
     calories: Optional[NutritionFact]
     protein: Optional[NutritionFact]
     carbohydrates: Optional[NutritionFact]
-    added_sugar: Optional[NutritionFact]
+    sugar: Optional[NutritionFact]
     fiber: Optional[NutritionFact]
     sodium: Optional[NutritionFact]
     saturated_fat: Optional[NutritionFact]
@@ -30,12 +30,17 @@ class TrueLabelAuditResult(BaseModel):
     overall_trust_score: int # 0-100
     verdicts: List[ClaimVerdict]
 
+class IngredientDetail(BaseModel):
+    name: str
+    ins_code: Optional[str] = None
+    percentage: Optional[float] = None
+    
 class ExtractedProductData(ProductBase):
     """
     Data Transfer Object (DTO) representing the structured output
     expected from the Gemini Vision OCR service.
     """
-    ingredients: List[str]
+    ingredients: List[IngredientDetail]
     claims: List[str]
     nutrition: NutritionInfo
 
@@ -45,6 +50,6 @@ class FoodDecisionProfile(BaseModel):
     """
     nutritional_quality_score: int
     processing_score: int
-    value_score: Optional[int]
+    value_score: Optional[int] = None
     overall_recommendation: str
     reasoning: str

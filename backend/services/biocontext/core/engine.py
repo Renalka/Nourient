@@ -1,7 +1,12 @@
-from google.cloud import bigquery
-from google.oauth2 import service_account
 from pydantic import BaseModel
 from typing import Dict, Any
+import firebase_admin
+from firebase_admin import credentials, firestore
+
+# Initialize Firebase Admin if not already initialized
+if not firebase_admin._apps:
+    cred = credentials.Certificate('firebase-adminsdk.json')
+    firebase_admin.initialize_app(cred, options={'projectId': 'nourient-38381'})
 
 class BioContextResult(BaseModel):
     user_name: str
@@ -11,19 +16,24 @@ class BioContextResult(BaseModel):
 
 class BioContextEngine:
     def __init__(self):
-        self.creds = service_account.Credentials.from_service_account_file('gcp-credentials.json')
-        self.client = bigquery.Client(credentials=self.creds, project=self.creds.project_id)
-        self.table_id = f"{self.creds.project_id}.food_intelligence.users"
+        self.db = firestore.client()
+        self.collection_name = 'users'
 
     def fetch_user(self, user_id: str) -> Dict[str, str]:
-        query = f"SELECT name, health_profile FROM `{self.table_id}` WHERE user_id = @user_id LIMIT 1"
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[bigquery.ScalarQueryParameter("user_id", "STRING", user_id)]
-        )
-        results = list(self.client.query(query, job_config=job_config).result())
-        if results:
-            return {"name": results[0].name, "health_profile": results[0].health_profile}
+        doc_ref = self.db.collection(self.collection_name).document(user_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            data = doc.to_dict()
+            return {"name": data.get("name", "Authenticated User"), "health_profile": data.get("health_profile", "GENERAL")}
         return {"name": "Unknown User", "health_profile": "GENERAL"}
+
+    def update_user_profile(self, user_id: str, health_profile: str) -> bool:
+        doc_ref = self.db.collection(self.collection_name).document(user_id)
+        doc_ref.set({
+            "name": "Authenticated User",
+            "health_profile": health_profile
+        }, merge=True)
+        return True
 
     def calculate_fit(self, user_id: str, product_data: Dict[str, Any], base_score: int) -> BioContextResult:
         user = self.fetch_user(user_id)

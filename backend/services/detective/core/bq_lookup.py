@@ -10,14 +10,18 @@ class DetectiveService:
     def __init__(self):
         self.creds = service_account.Credentials.from_service_account_file('gcp-credentials.json')
         self.client = bigquery.Client(credentials=self.creds, project=self.creds.project_id)
-        self.table_id = f"{self.creds.project_id}.food_intelligence.ingredient_dictionary"
+        # Pointing to the real production data loaded via ETL
+        self.table_id = f"{self.creds.project_id}.food_intelligence.ingredient_dictionary_real"
 
-    def analyze_ingredients(self, ingredients: List[str]) -> List[Dict]:
+    def analyze_ingredients(self, ingredients: List[Dict]) -> List[Dict]:
         if not ingredients:
             return []
+            
+        # Extract the names from the structured dictionaries
+        ingredient_names = [ing.get("name", "") for ing in ingredients if ing.get("name")]
 
         # Convert to lower case for loose matching
-        query_str = " OR ".join([f"LOWER(@ing_{i}) LIKE CONCAT('%', LOWER(name), '%')" for i in range(len(ingredients))])
+        query_str = " OR ".join([f"LOWER(@ing_{i}) LIKE CONCAT('%', LOWER(name), '%')" for i in range(len(ingredient_names))])
         
         query = f"""
             SELECT *
@@ -26,7 +30,7 @@ class DetectiveService:
         """
         
         query_parameters = [
-            bigquery.ScalarQueryParameter(f"ing_{i}", "STRING", ing) for i, ing in enumerate(ingredients)
+            bigquery.ScalarQueryParameter(f"ing_{i}", "STRING", ing) for i, ing in enumerate(ingredient_names)
         ]
         
         job_config = bigquery.QueryJobConfig(query_parameters=query_parameters)

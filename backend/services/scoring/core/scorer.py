@@ -51,7 +51,7 @@ class ScoringEngine:
         
         ingredients_list = product.ingredients or []
         num_ingredients = len(ingredients_list)
-        ingredients_lower = [i.lower() for i in ingredients_list]
+        ingredients_lower = [i.name.lower() for i in ingredients_list if i.name]
         
         # Ultra-processed markers (NOVA Group 4)
         upf_markers = [

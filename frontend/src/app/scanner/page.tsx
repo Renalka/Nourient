@@ -1,294 +1,492 @@
-'use client';
-
-import React, { useState } from 'react';
+"use client";
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import AuthWidget from "@/components/AuthWidget";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import SidebarLayout from '@/components/SidebarLayout';
+import AvatarMenu from '@/components/AvatarMenu';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
-export default function Home() {
-  const { user, getToken } = useAuth();
+const getGrade = (score: number) => {
+  if (score >= 90) return { letter: 'A', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-500' };
+  if (score >= 75) return { letter: 'B', color: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-400' };
+  if (score >= 60) return { letter: 'C', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', circle: 'border-yellow-500' };
+  if (score >= 40) return { letter: 'D', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', circle: 'border-orange-500' };
+  return { letter: 'E', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', circle: 'border-red-500' };
+};
+
+const getNova = (score: number) => {
+  if (score >= 80) return { label: 'Unprocessed', color: 'text-brand', bg: 'bg-brand-light', fill: 'bg-brand' };
+  if (score >= 50) return { label: 'Processed', color: 'text-yellow-700', bg: 'bg-yellow-50', fill: 'bg-yellow-500' };
+  return { label: 'Ultra-Processed', color: 'text-red-700', bg: 'bg-red-50', fill: 'bg-red-500' };
+};
+
+export default function ScannerPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [statusText, setStatusText] = useState('');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [step, setStep] = useState<1|2|3|4>(1); // 1: Capture, 2: Review, 3: Analyze, 4: Results
   const [result, setResult] = useState<any>(null);
-  const [score, setScore] = useState<any>(null);
-  const [audit, setAudit] = useState<any>(null);
-  const [detective, setDetective] = useState<any>(null);
-  const [bioContext, setBioContext] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [addingToBasket, setAddingToBasket] = useState(false);
+  const [basketMsg, setBasketMsg] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth");
+    }
+  }, [user, loading, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      setResult(null);
-      setScore(null);
-      setAudit(null);
-      setDetective(null);
-      setBioContext(null);
-      setError(null);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setPreviewUrl(URL.createObjectURL(selectedFile));
+      setStep(2); // Move to review
     }
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
-
-    setLoading(true);
+  const handleRetake = () => {
+    setFile(null);
+    setPreviewUrl(null);
+    setStep(1);
     setError(null);
-    setStatusText('Orchestrating microservices...');
+  };
+
+  const processImage = async () => {
+    if (!file) return;
+    setStep(3); // Analyzing
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
 
     try {
-      // 1. Get secure JWT from Firebase if logged in
-      const token = await getToken();
-      
-      const formData = new FormData();
-      formData.append('file', file);
+      const idToken = user ? await user.getIdToken() : 'anonymous';
 
-      // 2. Call the Orchestrator backend
-      const headers: HeadersInit = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const orchestratorResponse = await fetch('http://localhost:8003/api/v1/orchestrate/scan', {
+      // Step 1: ADK Orchestrator
+      const response = await fetch('http://localhost:8003/api/v1/orchestrate/scanner', {
         method: 'POST',
-        headers,
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        },
         body: formData,
       });
 
-      if (!orchestratorResponse.ok) {
-        if (orchestratorResponse.status === 401) {
-          throw new Error("401 Unauthorized: Your token is invalid or expired.");
-        }
-        const errorText = await orchestratorResponse.text();
-        throw new Error(`Orchestration failed: ${errorText}`);
+      if (!response.ok) {
+        throw new Error(`Orchestration failed: ${response.statusText}`);
       }
 
-      const unifiedData = await orchestratorResponse.json();
-      
-      setResult(unifiedData.extracted_data);
-      setScore(unifiedData.score);
-      setAudit(unifiedData.audit);
-      setDetective(unifiedData.detective);
-      setBioContext(unifiedData.biocontext);
-
+      const data = await response.json();
+      setResult(data);
+      setStep(4); // Results
     } catch (err: any) {
-      setError(err.message || 'An error occurred during orchestration.');
-    } finally {
-      setLoading(false);
-      setStatusText('');
+      console.error(err);
+      setError(err.message || 'An error occurred during analysis.');
+      setStep(2); // Back to review on error
     }
   };
 
+  const handleAddToBasket = async () => {
+    if (!user || !result?.extracted_data) return;
+    setAddingToBasket(true);
+    try {
+      const payloadData = {
+        ...result.extracted_data,
+        score: result.score,
+        biocontext: result.biocontext
+      };
+      
+      const response = await fetch(`http://localhost:8007/api/v1/basket/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: user.uid,
+          product_data: payloadData
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to add');
+      setBasketMsg('Added successfully!');
+      setTimeout(() => setBasketMsg(''), 3000);
+    } catch (err) {
+      setBasketMsg('Failed to add');
+    } finally {
+      setAddingToBasket(false);
+    }
+  };
+
+  if (loading || !user) return null;
+
   return (
-    <main className="min-h-screen p-6 md:p-12 bg-white text-black font-sans selection:bg-black selection:text-white">
-      <div className="max-w-3xl mx-auto space-y-12">
-        <header className="border-b border-black pb-6 relative">
-          <Link href="/dashboard" className="absolute top-0 right-0 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black hover:underline underline-offset-4">
-            &larr; Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tighter uppercase">Vision Scanner</h1>
-          <p className="mt-2 text-sm text-gray-500 uppercase tracking-widest">Personalized Intelligence Module</p>
-          
-          <div className="mt-6">
-            <AuthWidget />
+    <SidebarLayout
+      headerContent={
+        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-medium">
+          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 1 ? 'text-foreground' : 'text-gray-400'}`}>
+            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 1 ? 'bg-brand text-white' : 'bg-gray-100'}`}>1</span>
+            <span className="hidden sm:inline">Capture</span>
           </div>
-        </header>
+          <div className="w-2 sm:w-8 h-px bg-gray-200"></div>
+          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 2 ? 'text-foreground' : 'text-gray-400'}`}>
+            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 2 ? 'bg-brand text-white' : 'bg-gray-100'}`}>2</span>
+            <span className="hidden sm:inline">Review</span>
+          </div>
+          <div className="w-2 sm:w-8 h-px bg-gray-200"></div>
+          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 3 ? 'text-foreground' : 'text-gray-400'}`}>
+            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 3 ? 'bg-brand text-white' : 'bg-gray-100'}`}>3</span>
+            <span className="hidden sm:inline">Analyze</span>
+          </div>
+          <div className="w-2 sm:w-8 h-px bg-gray-200"></div>
+          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 4 ? 'text-foreground' : 'text-gray-400'}`}>
+            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 4 ? 'bg-brand text-white' : 'bg-gray-100'}`}>4</span>
+            <span className="hidden sm:inline">Results</span>
+          </div>
+        </div>
+      }
+    >
+      <div className="flex flex-col h-full">
 
-        <section className="space-y-6">
-          <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-widest text-black">
-              Analyze Label
-            </label>
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleFileChange}
-                className="block w-full text-sm text-gray-900 border border-black p-2 cursor-pointer focus:outline-none file:hidden"
-              />
-              <button
-                onClick={handleUpload}
-                disabled={!file || loading}
-                className="w-full md:w-auto px-8 py-2.5 bg-black text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? 'Processing...' : 'Scan'}
-              </button>
-            </div>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto p-8 pt-4">
+          <div className="max-w-5xl mx-auto h-full flex flex-col">
+            <Breadcrumbs />
             
-            {loading && statusText && (
-              <div className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-500 animate-pulse">
-                &gt; {statusText}
-              </div>
-            )}
-
             {error && (
-              <div className="p-4 bg-black text-white text-sm mt-4 font-mono">
-                [ERROR] {error}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {result && score && (
-          <section className="border-t border-black pt-8 space-y-10 animate-in fade-in duration-500">
-            
-            {/* New: BioContext Personalization Section */}
-            {bioContext ? (
-              <div className="bg-black text-white p-6">
-                <div className="flex justify-between items-center border-b border-gray-700 pb-4 mb-4">
-                  <div>
-                    <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">BioContext Profile</h2>
-                    <p className="text-xl font-bold tracking-tighter uppercase">{bioContext.health_profile}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xs text-gray-400 uppercase tracking-widest block">Metabolic Fit</span>
-                    <span className={`text-4xl font-bold ${bioContext.metabolic_fit_score < 40 ? 'text-red-500' : 'text-white'}`}>
-                      {bioContext.metabolic_fit_score}<span className="text-sm text-gray-500">/100</span>
-                    </span>
-                  </div>
-                </div>
-                <p className="text-sm leading-relaxed">{bioContext.context_reasoning}</p>
-              </div>
-            ) : !user ? (
-              <div className="border border-dashed border-gray-400 p-6 text-center bg-gray-50">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-600 mb-2">Unlock BioContext Personalization</h3>
-                <p className="text-xs text-gray-500">Sign in with Google to dynamically adjust scores based on your metabolic profile, allergies, and health goals.</p>
-              </div>
-            ) : null}
-
-            {/* Existing: Generic Food Decision Profile */}
-            <div className="border border-black p-6 bg-gray-50">
-              <h2 className="text-sm font-bold uppercase tracking-widest mb-6 text-gray-500">Generic Base Score</h2>
-              
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
-                <div>
-                  <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Recommendation</div>
-                  <div className={`text-2xl font-bold tracking-tighter uppercase ${
-                    score.overall_recommendation.includes('LIMIT') ? 'text-gray-500' : 'text-black'
-                  }`}>
-                    {score.overall_recommendation}
-                  </div>
-                </div>
-                <div className="flex gap-8">
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Nutrition</div>
-                    <div className="text-2xl font-bold tracking-tighter">{score.nutritional_quality_score}<span className="text-sm font-normal text-gray-500">/100</span></div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Processing</div>
-                    <div className="text-2xl font-bold tracking-tighter">{score.processing_score}<span className="text-sm font-normal text-gray-500">/100</span></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-200">
-                <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Why?</div>
-                <p className="text-sm leading-relaxed font-medium">{score.reasoning}</p>
-              </div>
-            </div>
-
-            {/* Extracted Data Section */}
-            <div>
-              <h2 className="text-3xl font-bold tracking-tighter mb-1">{result.name || 'UNKNOWN PRODUCT'}</h2>
-              <p className="text-sm text-gray-500 uppercase tracking-widest">{result.brand || 'UNKNOWN BRAND'} — {result.category || 'UNCATEGORIZED'}</p>
-            </div>
-
-            {result.claims && result.claims.length > 0 && (
-              <div>
-                <h3 className="text-xs font-bold uppercase tracking-widest border-b border-gray-200 pb-2 mb-4">Marketing Claims</h3>
-                <div className="flex flex-wrap gap-2">
-                  {result.claims.map((claim: string, idx: number) => (
-                    <span key={idx} className="px-3 py-1 bg-white text-black text-xs font-bold uppercase tracking-wider border border-black">
-                      {claim}
-                    </span>
-                  ))}
-                </div>
+              <div className="mb-6 p-4 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium">
+                {error}
               </div>
             )}
 
-            {/* 4. Ingredient Detective Section */}
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-widest border-b border-gray-200 pb-2 mb-4 flex justify-between items-end">
-                <span>Ingredients</span>
-                {detective?.flagged_ingredients?.length > 0 && (
-                  <span className="text-[10px] bg-black text-white px-2 py-0.5">{detective.flagged_ingredients.length} FLAGGED</span>
-                )}
-              </h3>
-              <p className="text-sm leading-relaxed text-black mb-4">
-                {result.ingredients?.length > 0 ? result.ingredients.join(', ') : 'NO INGREDIENTS DETECTED.'}
-              </p>
-              
-              {detective?.flagged_ingredients?.length > 0 && (
-                <div className="space-y-2 mt-4">
-                  {detective.flagged_ingredients.map((ing: any, i: number) => (
-                    <div key={i} className="border-l-2 border-black pl-4 py-1">
-                      <div className="flex justify-between items-baseline mb-1">
-                        <span className="font-bold text-sm tracking-tighter uppercase">{ing.name}</span>
-                        <span className="text-[10px] text-gray-500 uppercase tracking-widest">{ing.purpose}</span>
+            {(step === 1 || step === 2) && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-12 h-full min-h-[500px]">
+                {/* Left Text / Checklist */}
+                <div className="flex flex-col justify-center space-y-8">
+                  <div>
+                    <h1 className="text-4xl font-serif text-brand mb-4">Scan any food product</h1>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                      Capture clear images of the front of the pack, ingredients list, and nutrition facts for complete intelligence.
+                    </p>
+                  </div>
+                  <ul className="space-y-4">
+                    {["Front of the pack", "Ingredients list", "Nutrition facts", "Claims (optional)"].map((item, i) => (
+                      <li key={i} className="flex items-center gap-3 text-sm text-gray-600 font-medium">
+                        <div className="w-5 h-5 rounded-full bg-brand-light flex items-center justify-center text-brand">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Right Viewfinder */}
+                <div className="md:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-8 flex flex-col gap-8 items-center justify-center">
+                   <input 
+                     type="file" 
+                     accept="image/*" 
+                     capture="environment"
+                     ref={fileInputRef}
+                     onChange={handleFileChange}
+                     className="hidden"
+                   />
+                   
+                   <div className="flex flex-col gap-8 w-full items-center">
+                     {/* Main Frame */}
+                     <div 
+                       className="relative w-full aspect-[3/4] max-w-sm rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:bg-gray-100 transition-colors"
+                       onClick={() => fileInputRef.current?.click()}
+                     >
+                        {previewUrl ? (
+                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
+                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                            </div>
+                            <p className="text-sm font-medium text-gray-500">Tap to capture</p>
+                          </div>
+                        )}
+                        
+                        {/* Corner markers */}
+                        <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-brand"></div>
+                        <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-brand"></div>
+                        <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-brand"></div>
+                        <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-brand"></div>
+                     </div>
+
+                     {/* Thumbnails Row */}
+                     <div className="flex flex-row gap-6 justify-center">
+                        {["Front", "Ingredients", "Nutrition"].map((label, i) => (
+                          <div key={i} className="space-y-2 text-center">
+                            <div className={`w-16 h-16 mx-auto rounded-xl border-2 ${i===0 && previewUrl ? 'border-brand' : 'border-gray-200 border-dashed'} bg-white overflow-hidden flex items-center justify-center text-[10px] text-gray-300 transition-colors`}>
+                              {i===0 && previewUrl ? <img src={previewUrl} className="w-full h-full object-cover"/> : 'Empty'}
+                            </div>
+                            <span className="text-[11px] font-semibold text-gray-500">{label}</span>
+                          </div>
+                        ))}
+                        <div className="space-y-2 text-center cursor-pointer">
+                          <div className="w-16 h-16 mx-auto rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                          </div>
+                          <span className="text-[11px] font-semibold text-gray-500">Add claims</span>
+                        </div>
+                     </div>
+                   </div>
+
+                   {/* Bottom Controls */}
+                   <div className="flex justify-center items-center gap-12 mt-4 pt-4 border-t border-gray-100 w-full">
+                     <button onClick={step === 1 ? () => fileInputRef.current?.click() : handleRetake} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+                       {step === 1 ? 'Open Camera' : 'Retake'}
+                     </button>
+                     
+                     <div 
+                        onClick={step === 1 ? () => fileInputRef.current?.click() : processImage}
+                        className="w-16 h-16 rounded-full border-4 border-gray-200 flex items-center justify-center cursor-pointer hover:border-brand transition-colors"
+                      >
+                       <div className="w-12 h-12 rounded-full bg-brand shadow-md"></div>
+                     </div>
+                     
+                     <button onClick={step === 1 ? () => fileInputRef.current?.click() : processImage} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+                       {step === 1 ? 'Upload File' : 'Analyze'}
+                     </button>
+                   </div>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+                <div className="w-16 h-16 border-4 border-brand-light border-t-brand rounded-full animate-spin"></div>
+                <h2 className="text-xl font-serif text-brand">Orchestrating AI Agents...</h2>
+                <p className="text-sm text-gray-500">Extracting data, cross-referencing claims, computing scores.</p>
+              </div>
+            )}
+
+            {step === 4 && result && (
+              <div className="space-y-8 animate-fade-in pb-12">
+                 <div className="flex justify-between items-start">
+                   <div>
+                     <h1 className="text-3xl font-serif text-brand mb-1">{result.extracted_data?.name || 'Unnamed Product'}</h1>
+                     <p className="text-sm text-gray-500">{result.extracted_data?.brand || 'Unknown Brand'} • {result.extracted_data?.category || 'Uncategorized'}</p>
+                   </div>
+                   <div className="flex flex-col items-end">
+                     <button 
+                       onClick={handleAddToBasket} 
+                       disabled={addingToBasket}
+                       className="px-6 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors"
+                     >
+                       {addingToBasket ? 'Adding...' : 'Add to Basket'}
+                     </button>
+                     {basketMsg && <span className="text-xs text-brand mt-2 font-medium">{basketMsg}</span>}
+                   </div>
+                 </div>
+
+                 {/* Core Metrics Grid */}
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Nutri-Score Widget */}
+                    {result.score && (
+                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div className="absolute -right-6 -top-6 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 relative z-10">Nutritional Quality</h2>
+                        
+                        <div className="flex items-end justify-between relative z-10">
+                          <div>
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-sm mb-3 ${getGrade(result.score.nutritional_quality_score).fill || 'bg-brand'}`}>
+                              {getGrade(result.score.nutritional_quality_score).letter}
+                            </div>
+                            <p className="text-3xl font-serif text-foreground leading-none">{result.score.nutritional_quality_score}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-1">/ 100 Score</p>
+                          </div>
+                          
+                          <div className="text-right">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${getGrade(result.score.nutritional_quality_score).bg} ${getGrade(result.score.nutritional_quality_score).color}`}>
+                              Grade {getGrade(result.score.nutritional_quality_score).letter}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-600 mb-1">{ing.explanation}</p>
-                      <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 border border-gray-300">
-                        {ing.confidence_tier}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    )}
 
-            <div>
-              <h3 className="text-xs font-bold uppercase tracking-widest border-b border-gray-200 pb-2 mb-4">Nutrition Facts</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-black border border-black">
-                {Object.entries(result.nutrition || {}).map(([key, value]: any) => {
-                  if (!value) return null;
-                  return (
-                    <div key={key} className="p-4 bg-white flex flex-col justify-between">
-                      <div className="text-xs text-gray-500 uppercase tracking-widest mb-2">{key.replace('_', ' ')}</div>
-                      <div className="text-xl font-bold tracking-tighter">{value.amount} <span className="text-sm font-normal text-gray-500">{value.unit}</span></div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-        )}
+                    {/* NOVA ML Widget */}
+                    {result.score && (
+                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div className="absolute -left-6 -bottom-6 w-32 h-32 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 relative z-10 flex justify-between">
+                          <span>Processing Level</span>
+                          <span className="bg-brand text-white px-2 py-0.5 rounded text-[8px] tracking-widest">AI MODEL</span>
+                        </h2>
+                        
+                        <div className="flex flex-col justify-end h-full relative z-10">
+                           <p className="text-3xl font-serif text-foreground leading-none mb-2">{result.score.processing_score}</p>
+                           
+                           {/* Progress Bar */}
+                           <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+                             <div className={`h-full rounded-full ${getNova(result.score.processing_score).fill}`} style={{ width: `${result.score.processing_score}%` }}></div>
+                           </div>
+                           
+                           <div className="flex justify-between items-center">
+                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nova Index</p>
+                             <span className={`text-[10px] font-bold uppercase tracking-widest ${getNova(result.score.processing_score).color}`}>
+                               {getNova(result.score.processing_score).label}
+                             </span>
+                           </div>
+                        </div>
+                      </div>
+                    )}
 
-        {/* 3. TrueLabel Auditor Component */}
-        {audit && (
-          <div className="border border-black p-6 space-y-6">
-            <div className="flex justify-between items-center border-b border-black pb-4">
-              <h2 className="text-xl font-bold tracking-tighter uppercase">TrueLabel Audit</h2>
-              <div className="text-right">
-                <span className="text-xs text-gray-500 uppercase tracking-widest block">Trust Score</span>
-                <span className="text-2xl font-bold">{audit.overall_trust_score}/100</span>
+                    {/* Metabolic Fit Widget */}
+                    {result.biocontext ? (
+                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+                        <div className="absolute right-0 top-0 w-full h-full bg-gradient-to-br from-white to-brand-light/30 opacity-50"></div>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 relative z-10">Metabolic Fit</h2>
+                        
+                        <div className="relative z-10 flex flex-col h-full justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="relative flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-40"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-brand"></span>
+                              </span>
+                              <span className="text-xs font-bold text-brand uppercase tracking-widest">{result.biocontext.health_profile}</span>
+                            </div>
+                            <p className="text-3xl font-serif text-brand leading-none mb-1">{result.biocontext.metabolic_fit_score}</p>
+                          </div>
+                          
+                          <p className="text-xs text-gray-500 leading-snug line-clamp-2" title={result.biocontext.context_reasoning}>
+                            {result.biocontext.context_reasoning}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 p-6 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mb-3 text-gray-400">
+                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                         </div>
+                         <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Metabolic Fit</h3>
+                         <p className="text-[10px] text-gray-400">Sign in to unlock personalized metabolic scoring.</p>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Recommendation Banner */}
+                 {result.score && (
+                   <div className={`p-4 rounded-2xl border flex items-center justify-between ${result.score.overall_recommendation.includes('LIMIT') ? 'bg-red-50 border-red-100' : 'bg-brand-light border-brand/20'}`}>
+                     <div className="flex items-center gap-4">
+                       <div className={`w-10 h-10 rounded-full flex items-center justify-center ${result.score.overall_recommendation.includes('LIMIT') ? 'bg-red-100 text-red-600' : 'bg-white text-brand'}`}>
+                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                       </div>
+                       <div>
+                         <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-700' : 'text-brand'}`}>Nourient's Recommendation</p>
+                         <p className={`text-lg font-serif leading-none ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-900' : 'text-brand-dark'}`}>{result.score.overall_recommendation}</p>
+                       </div>
+                     </div>
+                     {/*<p className={`text-xs max-w-md hidden md:block ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-600/80' : 'text-brand-dark/80'}`}>
+                       {result.score.reasoning}
+                     </p>*/}
+                   </div>
+                 )}
+
+                 <div className="grid grid-cols-1 gap-6">
+
+                    {/* TrueLabel Auditor */}
+                    {result.extracted_data?.audit && (
+                      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm h-full">
+                        <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6">TrueLabel Auditor</h2>
+                        <div className="space-y-4">
+                          {result.extracted_data.audit.map((audit: any, idx: number) => (
+                            <div key={idx} className={`p-4 rounded-xl border-l-4 ${audit.verdict === 'Deceptive' ? 'border-red-500 bg-red-50' : 'border-green-500 bg-brand-light'}`}>
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="font-bold text-sm text-foreground">"{audit.claim}"</span>
+                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${audit.verdict === 'Deceptive' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-brand'}`}>
+                                  {audit.verdict}
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-600">{audit.reasoning}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                 </div>
+
+                 {/* Ingredient Detective */}
+                 {result.detective && (
+                   <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                     <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-4 flex justify-between items-center">
+                       Ingredient Detective
+                       {(result.detective.flagged_ingredients?.length > 0 || result.detective.decoded_additives?.length > 0) && (
+                         <span className="bg-red-50 text-red-600 px-2 py-1 rounded-full text-[10px]">Active</span>
+                       )}
+                     </h2>
+                     <p className="text-sm text-gray-600 mb-6 leading-relaxed border-b border-gray-100 pb-6">
+                       <span className="font-bold block mb-2 text-xs text-gray-400 uppercase tracking-widest">Raw Ingredient List</span>
+                       {result.extracted_data?.ingredients?.map((ing: any) => 
+                         ing.percentage ? `${ing.name} (${ing.percentage}%)` : ing.name
+                       ).join(', ') || 'No ingredients detected.'}
+                     </p>
+
+                     {/* Deterministic Unified Decoder */}
+                     {result.detective.decoded_additives?.length > 0 && (
+                       <div className="mb-8">
+                         <h3 className="font-bold text-xs text-foreground uppercase tracking-widest mb-3">Ingredients Decoded</h3>
+                         <div className="space-y-2">
+                           {result.detective.decoded_additives.map((additive: any, i: number) => (
+                             <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm gap-3">
+                               <div className="flex-1">
+                                 <div className="flex items-center gap-2 mb-1">
+                                   <span className="font-bold text-sm text-foreground">{additive.name}</span>
+                                   {additive.code && <span className="text-[10px] text-gray-500 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{additive.code}</span>}
+                                 </div>
+                                 {additive.explanation && <p className="text-[11px] text-gray-500 line-clamp-1">{additive.explanation}</p>}
+                               </div>
+                               <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-widest bg-gray-50 border border-gray-100 px-2 py-1 rounded-md">{additive.source}</span>
+                                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-widest bg-gray-50 border border-gray-100 px-2 py-1 rounded-md max-w-[120px] truncate" title={additive.category}>{additive.category}</span>
+                                 <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-1 rounded-full ${additive.risk_level.toLowerCase() === 'safe' ? 'bg-green-100 text-green-700 border border-green-200' : additive.risk_level.toLowerCase() === 'unknown' ? 'bg-gray-100 text-gray-600 border border-gray-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
+                                   {additive.risk_level}
+                                 </span>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* AI Flagger */}
+                     {result.detective.flagged_ingredients?.length > 0 && (
+                       <div>
+                         <h3 className="font-bold text-xs text-foreground uppercase tracking-widest mb-3">Flagged Concerns</h3>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {result.detective.flagged_ingredients.map((ing: any, i: number) => (
+                             <div key={i} className="p-4 bg-red-50 rounded-xl border border-red-100">
+                               <div className="flex justify-between items-center mb-2">
+                                 <span className="font-bold text-sm text-red-700">{ing.name}</span>
+                                 <span className="text-[10px] uppercase font-bold text-red-700 tracking-widest bg-red-100 px-2 py-1 rounded-full">{ing.purpose}</span>
+                               </div>
+                               <p className="text-xs text-red-600 mb-1">{ing.warning || ing.explanation}</p>
+                               {ing.studies && <p className="text-[10px] text-red-400 italic mt-2 border-t border-red-100 pt-2">Studies: {ing.studies}</p>}
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+                   </div>
+                 )}
+                 
+                 <div className="flex justify-center mt-8">
+                   <button onClick={handleRetake} className="px-6 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                     Scan Another Product
+                   </button>
+                 </div>
               </div>
-            </div>
-            
-            <div className="space-y-4">
-              {audit.verdicts && audit.verdicts.length > 0 ? (
-                audit.verdicts.map((v: any, i: number) => (
-                  <div key={i} className="border border-gray-200 p-4 relative">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-bold text-sm tracking-tighter uppercase">{v.claim}</h3>
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 border ${
-                        v.status === 'DECEPTIVE' ? 'border-black bg-black text-white' :
-                        v.status === 'MISLEADING' ? 'border-gray-500 text-gray-800 bg-gray-100' :
-                        'border-gray-300 text-gray-500'
-                      }`}>
-                        {v.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">{v.reasoning}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500 uppercase">No claims analyzed.</p>
-              )}
-            </div>
+            )}
+
           </div>
-        )}
+        </div>
       </div>
-    </main>
+    </SidebarLayout>
   );
 }

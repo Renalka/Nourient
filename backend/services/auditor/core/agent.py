@@ -30,13 +30,16 @@ class AuditorAgent:
                 verdicts=[ClaimVerdict(claim="No claims to audit", status="VERIFIED", reasoning="Nothing to check.")]
             )
             
+        # Extract names for the prompt
+        ingredient_names = [i.name for i in product.ingredients if i.name]
+        
         prompt = f"""
         You are a strict, adversarial food regulatory auditor working for the FDA/FSSAI.
         Your job is to expose 'greenwashing' and deceptive marketing on food packaging.
         
         Product: {product.name}
         Marketing Claims on the front: {product.claims}
-        Actual Ingredients List on the back: {product.ingredients}
+        Actual Ingredients List on the back: {ingredient_names}
         
         Analyze EACH claim against the ingredients. Look for loopholes. 
         For example: If the claim is 'No Added Sugar', but the ingredients contain 'Apple Juice Concentrate', 'Maltodextrin', or 'Honey', that is DECEPTIVE.

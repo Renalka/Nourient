@@ -7,9 +7,11 @@ import os
 
 # Initialize Firebase Admin if not already initialized
 if not firebase_admin._apps:
-    # Use the same GCP service account key for Firebase Admin
-    cred = credentials.Certificate('gcp-credentials.json')
-    firebase_admin.initialize_app(cred)
+    # Use the proper Firebase Admin SDK service account key
+    cred = credentials.Certificate('firebase-adminsdk.json')
+    firebase_admin.initialize_app(cred, {
+        'projectId': 'nourient-38381'
+    })
 
 security = HTTPBearer(auto_error=False)
 
