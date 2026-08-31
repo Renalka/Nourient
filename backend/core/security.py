@@ -15,14 +15,17 @@ if not firebase_admin._apps:
 
 security = HTTPBearer(auto_error=False)
 
-async def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Security(security)) -> dict:
+async def verify_token_strict(credentials: Optional[HTTPAuthorizationCredentials] = Security(security)) -> dict:
     """
-    FastAPI Dependency to verify the Firebase JWT token.
-    If no token is provided, returns a dummy anonymous token.
-    Throws 401 if a token IS provided but is invalid.
+    STRICT: Requires a valid Firebase JWT token. Throws 401 if missing or invalid.
+    Use this for Basket, Profile, and other protected endpoints.
     """
     if not credentials:
-        return {"uid": "anonymous"}
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication credentials were not provided.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
         
     token = credentials.credentials
     try:
@@ -36,8 +39,36 @@ async def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Sec
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-def get_current_user_id(decoded_token: dict = Security(verify_token)) -> str:
+async def verify_token_optional(credentials: Optional[HTTPAuthorizationCredentials] = Security(security)) -> dict:
     """
-    Extracts the user ID from the verified token, or 'anonymous'.
+    OPTIONAL: Validates the token if provided, otherwise returns 'anonymous'.
+    Use this for the Scanner API where guests are allowed.
+    """
+    if not credentials:
+        return {"uid": "anonymous"}
+        
+    token = credentials.credentials
+    try:
+        decoded_token = auth.verify_id_token(token)
+        return decoded_token
+    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid authentication credentials: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+def get_current_user_id(decoded_token: dict = Security(verify_token_strict)) -> str:
+    """
+    STRICT: Extracts the verified user ID. Throws 401 if not authenticated.
+    """
+    uid = decoded_token.get('uid')
+    if not uid or uid == 'anonymous':
+        raise HTTPException(status_code=401, detail="Valid user session required.")
+    return uid
+
+def get_optional_user_id(decoded_token: dict = Security(verify_token_optional)) -> str:
+    """
+    OPTIONAL: Extracts the user ID from the verified token, or returns 'anonymous'.
     """
     return decoded_token.get('uid', 'anonymous')

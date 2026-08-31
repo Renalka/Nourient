@@ -22,7 +22,7 @@ const getNova = (score: number) => {
 };
 
 export default function ScannerPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, getToken } = useAuth();
   const router = useRouter();
 
   const [file, setFile] = useState<File | null>(null);
@@ -83,6 +83,25 @@ export default function ScannerPage() {
 
       const data = await response.json();
       setResult(data);
+      
+      // Save to recent scans history (max 5)
+      try {
+        const historyStr = localStorage.getItem('recentScans');
+        let history = historyStr ? JSON.parse(historyStr) : [];
+        const newScan = {
+          id: Date.now(),
+          name: data.extracted_data?.name || "Unnamed Product",
+          score: data.score?.nutritional_quality_score || 0,
+          ingredients: data.extracted_data?.ingredients || [],
+          timestamp: new Date().toISOString()
+        };
+        history.unshift(newScan);
+        history = history.slice(0, 5); // Keep only last 5
+        localStorage.setItem('recentScans', JSON.stringify(history));
+      } catch (e) {
+        console.error("Failed to save history", e);
+      }
+      
       setStep(4); // Results
     } catch (err: any) {
       console.error(err);
@@ -95,6 +114,7 @@ export default function ScannerPage() {
     if (!user || !result?.extracted_data) return;
     setAddingToBasket(true);
     try {
+      const token = await getToken();
       const payloadData = {
         ...result.extracted_data,
         score: result.score,
@@ -103,9 +123,11 @@ export default function ScannerPage() {
       
       const response = await fetch(`http://localhost:8007/api/v1/basket/add`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
-          user_id: user.uid,
           product_data: payloadData
         }),
       });
@@ -434,18 +456,22 @@ export default function ScannerPage() {
                          <h3 className="font-bold text-xs text-foreground uppercase tracking-widest mb-3">Ingredients Decoded</h3>
                          <div className="space-y-2">
                            {result.detective.decoded_additives.map((additive: any, i: number) => (
-                             <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm gap-3">
-                               <div className="flex-1">
-                                 <div className="flex items-center gap-2 mb-1">
-                                   <span className="font-bold text-sm text-foreground">{additive.name}</span>
-                                   {additive.code && <span className="text-[10px] text-gray-500 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">{additive.code}</span>}
+                             <div key={i} className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-white rounded-xl border border-gray-100 shadow-sm gap-4">
+                               <div className="flex-1 min-w-0">
+                                 <div className="flex items-center gap-2">
+                                   <span className="font-bold text-sm text-foreground truncate">{additive.name}</span>
+                                   {additive.code && <span className="text-[10px] text-gray-500 font-mono bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded shrink-0">{additive.code}</span>}
                                  </div>
-                                 {additive.explanation && <p className="text-[11px] text-gray-500 line-clamp-1">{additive.explanation}</p>}
                                </div>
-                               <div className="flex flex-wrap items-center gap-2 shrink-0">
-                                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-widest bg-gray-50 border border-gray-100 px-2 py-1 rounded-md">{additive.source}</span>
-                                 <span className="text-[9px] uppercase font-bold text-gray-500 tracking-widest bg-gray-50 border border-gray-100 px-2 py-1 rounded-md max-w-[120px] truncate" title={additive.category}>{additive.category}</span>
-                                 <span className={`text-[9px] uppercase font-bold tracking-widest px-2 py-1 rounded-full ${additive.risk_level.toLowerCase() === 'safe' ? 'bg-green-100 text-green-700 border border-green-200' : additive.risk_level.toLowerCase() === 'unknown' ? 'bg-gray-100 text-gray-600 border border-gray-200' : 'bg-red-100 text-red-700 border border-red-200'}`}>
+                               <div className="flex flex-col sm:flex-row items-center gap-2 shrink-0">
+                                 <span className="w-full sm:w-[130px] text-[9px] uppercase font-bold text-gray-500 tracking-widest bg-gray-50 border border-gray-100 px-2 py-1 rounded-full text-center shrink-0">{additive.source}</span>
+                                 <span className="w-full sm:w-[150px] text-[9px] uppercase font-bold text-gray-500 tracking-widest bg-gray-50 border border-gray-100 px-2 py-1 rounded-full text-center shrink-0">{additive.category}</span>
+                                 <span className={`w-full sm:w-[100px] text-[9px] uppercase font-bold tracking-widest px-2 py-1 rounded-full text-center shrink-0 ${
+                                   additive.risk_level.toLowerCase() === 'safe' ? 'bg-green-100 text-green-700 border border-green-200' :
+                                   additive.risk_level.toLowerCase() === 'moderate risk' || additive.risk_level.toLowerCase() === 'permitted additive' ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                                   additive.risk_level.toLowerCase() === 'unknown' ? 'bg-gray-100 text-gray-600 border border-gray-200' :
+                                   'bg-red-100 text-red-700 border border-red-200'
+                                 }`}>
                                    {additive.risk_level}
                                  </span>
                                </div>

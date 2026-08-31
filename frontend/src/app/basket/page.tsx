@@ -7,17 +7,14 @@ import SidebarLayout from '@/components/SidebarLayout';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function BasketPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, getToken } = useAuth();
   const router = useRouter();
   
   const [basketItems, setBasketItems] = useState<any[]>([]);
-  // Store the user's expected daily intake (in grams) for each item index
-  const [intakes, setIntakes] = useState<Record<number, number>>({});
+  const [frequencies, setFrequencies] = useState<Record<number, string>>({});
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [frequencies, setFrequencies] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (!loading && !user) {
@@ -28,12 +25,14 @@ export default function BasketPage() {
   const fetchBasket = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`http://localhost:8007/api/v1/basket/analyze/${user.uid}`);
+      const token = await getToken();
+      const res = await fetch(`http://localhost:8007/api/v1/basket/analyze`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (!res.ok) throw new Error("Failed to fetch basket");
       const data = await res.json();
       setBasketItems(data.items || []);
       
-      // Initialize frequencies
       const initialFreq: Record<number, string> = {};
       (data.items || []).forEach((_: any, idx: number) => {
         initialFreq[idx] = "weekly";
@@ -58,7 +57,11 @@ export default function BasketPage() {
   const clearBasket = async () => {
     if (!user) return;
     try {
-      await fetch(`http://localhost:8007/api/v1/basket/clear/${user.uid}`, { method: 'DELETE' });
+      const token = await getToken();
+      await fetch(`http://localhost:8007/api/v1/basket/clear`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       fetchBasket();
     } catch (err: any) {
       setError(err.message);
@@ -68,7 +71,11 @@ export default function BasketPage() {
   const removeItem = async (index: number) => {
     if (!user) return;
     try {
-      await fetch(`http://localhost:8007/api/v1/basket/remove/${user.uid}/${index}`, { method: 'DELETE' });
+      const token = await getToken();
+      await fetch(`http://localhost:8007/api/v1/basket/remove/${index}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       fetchBasket();
     } catch (err: any) {
       setError(err.message);

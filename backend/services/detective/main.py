@@ -18,3 +18,4 @@ app.add_middleware(
 )
 
 app.include_router(routes.router)
+app.include_router(routes.dict_router)

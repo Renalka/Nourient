@@ -10,6 +10,19 @@ export default function DashboardPage() {
   const { user, loading } = useAuth();
   const displayName = user?.email?.split('@')[0] || "Guest";
 
+  const [recentScans, setRecentScans] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    try {
+      const historyStr = localStorage.getItem('recentScans');
+      if (historyStr) {
+        setRecentScans(JSON.parse(historyStr));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   return (
     <SidebarLayout
       headerContent={
@@ -111,24 +124,28 @@ export default function DashboardPage() {
                {/* Decorative background shape replacing image */}
                <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-brand-light rounded-full opacity-50"></div>
             </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-              <h2 className="font-bold text-foreground mb-4 px-2">Quick Actions</h2>
-              <div className="grid grid-cols-3 gap-2">
-                <Link href="/scanner" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-brand-light transition-colors group">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 group-hover:bg-white group-hover:text-brand mb-2 transition-colors shadow-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
-                  </div>
-                  <span className="text-[10px] font-medium text-center text-gray-600 group-hover:text-brand">Scan<br/>Product</span>
-                </Link>
-                <div className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-brand-light transition-colors group cursor-not-allowed opacity-50">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 group-hover:bg-white group-hover:text-brand mb-2 transition-colors shadow-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                  </div>
-                  <span className="text-[10px] font-medium text-center text-gray-600 group-hover:text-brand">Compare<br/>Products</span>
+            <div className="min-w-[140px]">
+              <Link href="/scanner" className="group block p-4 bg-white border border-gray-100 rounded-2xl hover:border-brand hover:shadow-md transition-all h-full">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 </div>
-                <Link href="/basket" className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-brand-light transition-colors group">
+                <h3 className="font-bold text-sm text-foreground mb-1 group-hover:text-blue-600 transition-colors">Label Audit</h3>
+                <p className="text-[10px] text-gray-500">Verify front-of-pack claims</p>
+              </Link>
+            </div>
+
+            <div className="min-w-[140px]">
+              <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl h-full opacity-70 cursor-not-allowed flex flex-col justify-center items-center text-center">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Search<br/>Database</span>
+              </div>
+            </div>
+
+            <div className="min-w-[140px]">
+              <div className="h-full flex items-center justify-center">
+                <Link href="/basket" className="group flex flex-col items-center justify-center w-24 h-24 rounded-full border-2 border-dashed border-gray-200 hover:border-brand hover:bg-brand/5 transition-all">
                   <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 group-hover:bg-white group-hover:text-brand mb-2 transition-colors shadow-sm">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                   </div>
@@ -146,28 +163,39 @@ export default function DashboardPage() {
             <button className="text-xs font-medium text-gray-500 hover:text-brand">View all &rarr;</button>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { name: "Kellogg's Muesli", time: "2 min ago", score: 62 },
-              { name: "Amul Protein Lassi", time: "2 hrs ago", score: 78 },
-              { name: "Haldiram's Soya Sticks", time: "Yesterday", score: 48 },
-              { name: "Britannia 100% Whole Wheat", time: "2 days ago", score: 71 },
-            ].map(scan => (
-              <div key={scan.name} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer">
-                <div className="h-32 bg-gray-50 rounded-xl mb-4 flex items-center justify-center">
-                  <div className="w-16 h-20 bg-gray-200 rounded border border-gray-300 shadow-sm flex items-center justify-center text-[10px] text-gray-400">Image</div>
-                </div>
-                <div className="flex justify-between items-end">
-                   <div>
-                     <h3 className="text-xs font-bold text-foreground truncate w-24">{scan.name}</h3>
-                     <p className="text-[10px] text-gray-400">{scan.time}</p>
-                   </div>
-                   <div className="w-8 h-8 rounded-full border-2 border-brand text-brand flex items-center justify-center text-[10px] font-bold">
-                     {scan.score}
-                   </div>
-                </div>
+          <div className="flex flex-col gap-3">
+            {recentScans.length === 0 ? (
+              <div className="p-8 bg-gray-50 border border-gray-100 rounded-2xl text-center">
+                <p className="text-sm text-gray-500">No recent scans found.</p>
+                <Link href="/scanner" className="text-brand font-bold text-sm mt-2 inline-block">Scan a product &rarr;</Link>
               </div>
-            ))}
+            ) : (
+              recentScans.map((scan, i) => (
+                <div key={scan.id || i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      {scan.name}
+                      <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
+                        {new Date(scan.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-2xl">
+                      {scan.ingredients && scan.ingredients.length > 0 
+                        ? scan.ingredients.map((ing: any) => ing.name).join(', ') 
+                        : 'No ingredients detected'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Score</span>
+                      <div className={`text-lg font-black ${scan.score > 75 ? 'text-green-600' : scan.score > 45 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {scan.score}/100
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
         

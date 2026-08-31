@@ -34,3 +34,15 @@ async def analyze_ingredients(payload: IngredientPayload):
     except Exception as e:
         logger.error(f"Detective failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+dict_router = APIRouter()
+
+@dict_router.get("/dictionary")
+async def dictionary_search(q: str):
+    """Fast autocomplete endpoint for the Ingredient Dictionary"""
+    try:
+        results = decoder.search_ingredients(q)
+        return {"results": results}
+    except Exception as e:
+        logger.error(f"Dictionary search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

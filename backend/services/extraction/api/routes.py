@@ -54,6 +54,7 @@ CRITICAL INSTRUCTIONS FOR INGREDIENTS:
 1. Extract a clean, deduplicated list of ingredients.
 2. If an ingredient has a quantity (like percentages mentioned in brackets e.g. "Wheat Flour (60%)"), extract the percentage value as a float.
 3. If an ingredient contains an INS code or E-number (e.g. "Acidity Regulator (INS 330)"), put "INS 330" in `ins_code` and put "Acidity Regulator" in `name`. Do not leave the INS code inside the name.
+4. If an ingredient groups a generic category with a specific ingredient (e.g., "Emulsifier - Soy Lecithin", "Emulsifier (Soy Lecithin)", "Flavoring (Vanilla)", "Vegetable Oil (Palm Oil)"), you MUST extract the SPECIFIC ingredient as the `name` (e.g. "Soy Lecithin", "Vanilla", "Palm Oil"). Do NOT use the generic category (Emulsifier, Flavoring, Vegetable Oil) as the primary name, unless there is no specific ingredient mentioned.
 
 CRITICAL INSTRUCTIONS FOR NUTRITION FACTS:
 1. You MUST extract values strictly "per 100g" or "per 100ml". 

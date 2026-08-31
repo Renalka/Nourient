@@ -18,12 +18,12 @@ BIOCONTEXT_URL = "http://127.0.0.1:8005/api/v1/biocontext/evaluate"
 
 from fastapi import Form, Depends
 from typing import Optional
-from core.security import get_current_user_id
+from core.security import get_optional_user_id
 
 @router.post("/scanner")
 async def process_scanner(
     file: UploadFile = File(...),
-    user_id: str = Depends(get_current_user_id)
+    user_id: str = Depends(get_optional_user_id)
 ):
     """
     Optimized route for the Vision Scanner & Score module.
