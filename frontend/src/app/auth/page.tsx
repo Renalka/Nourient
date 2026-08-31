@@ -21,7 +21,7 @@ export default function AuthPage() {
       <div className="w-full max-w-sm space-y-8 bg-white p-8 rounded-2xl border border-gray-100 shadow-xl">
         <header className="text-center space-y-2">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
-            <img src="/logo.png" alt="Nourient Logo" className="w-8 h-8 object-contain" />
+            <img src="/icon.png" alt="Nourient Logo" className="w-8 h-8 object-contain" />
             <span className="font-bold tracking-widest text-sm text-brand uppercase">Nourient</span>
           </Link>
           <h1 className="text-2xl font-serif text-brand">Welcome back</h1>

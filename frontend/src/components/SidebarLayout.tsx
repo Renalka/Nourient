@@ -78,7 +78,7 @@ export default function SidebarLayout({ children, headerContent }: SidebarLayout
              </button>
              
              <Link href="/" className="flex items-center gap-2">
-               <img src="/logo.png" alt="Nourient Logo" className="w-8 h-8 object-contain" />
+               <img src="/icon.png" alt="Nourient Logo" className="w-8 h-8 object-contain" />
                <span className="font-bold tracking-widest text-sm text-brand uppercase hidden md:block">Nourient</span>
              </Link>
            </div>
