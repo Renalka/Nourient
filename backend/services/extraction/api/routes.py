@@ -47,8 +47,16 @@ Extract the details meticulously and return them strictly in the following JSON 
     "fiber": {"amount": 0.0, "unit": "g"},
     "sodium": {"amount": 0.0, "unit": "mg"},
     "saturated_fat": {"amount": 0.0, "unit": "g"}
-  }
+  },
+  "error": null,
+  "error_message": null
 }
+
+CRITICAL INSTRUCTIONS FOR REJECTING INVALID IMAGES:
+1. If the image is extremely blurry and completely illegible, set `error` to "BLURRY" and `error_message` to "The image is too blurry to read. Please capture a clearer photo of the label."
+2. If the image is not a food product label, ingredients list, or nutrition table (e.g., a photo of a person, a random object, scenery), set `error` to "INVALID_IMAGE" and `error_message` to "This does not appear to be a food product label. Please scan the ingredients or nutrition facts."
+3. If the image is a food label but contains zero ingredients AND zero nutrition facts, set `error` to "NO_DATA_FOUND" and `error_message` to "We couldn't detect any ingredients or nutrition facts. Ensure the text is clearly visible."
+4. If you set an error, leave the other fields (name, brand, ingredients, claims) empty or empty lists.
 
 CRITICAL INSTRUCTIONS FOR INGREDIENTS:
 1. Extract a clean, deduplicated list of ingredients.

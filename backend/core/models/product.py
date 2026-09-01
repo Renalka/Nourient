@@ -43,6 +43,8 @@ class ExtractedProductData(ProductBase):
     ingredients: List[IngredientDetail]
     claims: List[str]
     nutrition: NutritionInfo
+    error: Optional[str] = None
+    error_message: Optional[str] = None
 
 class FoodDecisionProfile(BaseModel):
     """

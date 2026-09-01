@@ -33,7 +33,11 @@ export default function ScannerPage() {
   const [addingToBasket, setAddingToBasket] = useState(false);
   const [basketMsg, setBasketMsg] = useState("");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
+  
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -41,11 +45,62 @@ export default function ScannerPage() {
     }
   }, [user, loading, router]);
 
+  useEffect(() => {
+    return () => { stopCamera(); };
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      setIsCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera error:", err);
+      alert("Could not access camera. Please check permissions or use the upload button.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const capturedFile = new File([blob], "capture.jpg", { type: "image/jpeg" });
+            setFile(capturedFile);
+            setPreviewUrl(URL.createObjectURL(capturedFile));
+            stopCamera();
+            setStep(2);
+          }
+        }, 'image/jpeg', 0.9);
+      }
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
+      stopCamera();
       setStep(2); // Move to review
     }
   };
@@ -66,7 +121,8 @@ export default function ScannerPage() {
     formData.append('file', file);
 
     try {
-      const idToken = user ? await user.getIdToken() : 'anonymous';
+      const token = await getToken();
+      const idToken = token || 'anonymous';
 
       // Step 1: ADK Orchestrator
       const response = await fetch('http://localhost:8003/api/v1/orchestrate/scanner', {
@@ -78,10 +134,19 @@ export default function ScannerPage() {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+           throw new Error("Your session expired. Please refresh the page or log in again.");
+        }
         throw new Error(`Orchestration failed: ${response.statusText}`);
       }
 
       const data = await response.json();
+      
+      // Explicit AI Rejections (Blurry, Invalid Image, No Data)
+      if (data.extracted_data?.error) {
+        throw new Error(data.extracted_data.error_message || "Could not read the image.");
+      }
+
       setResult(data);
       
       // Save to recent scans history (max 5)
@@ -209,8 +274,7 @@ export default function ScannerPage() {
                    <input 
                      type="file" 
                      accept="image/*" 
-                     capture="environment"
-                     ref={fileInputRef}
+                     ref={uploadInputRef}
                      onChange={handleFileChange}
                      className="hidden"
                    />
@@ -219,17 +283,22 @@ export default function ScannerPage() {
                      {/* Main Frame */}
                      <div 
                        className="relative w-full aspect-[3/4] max-w-sm rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:bg-gray-100 transition-colors"
-                       onClick={() => fileInputRef.current?.click()}
+                       onClick={isCameraActive ? capturePhoto : (step === 1 ? startCamera : undefined)}
                      >
-                        {previewUrl ? (
-                          <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="text-center">
-                            <div className="w-16 h-16 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
-                              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                        <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${isCameraActive ? 'block' : 'hidden'}`} />
+                        <canvas ref={canvasRef} className="hidden" />
+                        
+                        {!isCameraActive && (
+                          previewUrl ? (
+                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="text-center">
+                              <div className="w-16 h-16 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                              </div>
+                              <p className="text-sm font-medium text-gray-500">Tap to activate camera</p>
                             </div>
-                            <p className="text-sm font-medium text-gray-500">Tap to capture</p>
-                          </div>
+                          )
                         )}
                         
                         {/* Corner markers */}
@@ -260,18 +329,18 @@ export default function ScannerPage() {
 
                    {/* Bottom Controls */}
                    <div className="flex justify-center items-center gap-12 mt-4 pt-4 border-t border-gray-100 w-full">
-                     <button onClick={step === 1 ? () => fileInputRef.current?.click() : handleRetake} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
-                       {step === 1 ? 'Open Camera' : 'Retake'}
+                     <button onClick={step === 1 ? (isCameraActive ? stopCamera : startCamera) : handleRetake} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-32">
+                       {step === 1 ? (isCameraActive ? 'Cancel' : 'Open Camera') : 'Retake'}
                      </button>
                      
                      <div 
-                        onClick={step === 1 ? () => fileInputRef.current?.click() : processImage}
+                        onClick={step === 1 ? (isCameraActive ? capturePhoto : startCamera) : processImage}
                         className="w-16 h-16 rounded-full border-4 border-gray-200 flex items-center justify-center cursor-pointer hover:border-brand transition-colors"
                       >
-                       <div className="w-12 h-12 rounded-full bg-brand shadow-md"></div>
+                       <div className={`w-12 h-12 rounded-full shadow-md ${isCameraActive ? 'bg-red-500' : 'bg-brand'}`}></div>
                      </div>
                      
-                     <button onClick={step === 1 ? () => fileInputRef.current?.click() : processImage} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+                     <button onClick={step === 1 ? () => uploadInputRef.current?.click() : processImage} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-32">
                        {step === 1 ? 'Upload File' : 'Analyze'}
                      </button>
                    </div>
