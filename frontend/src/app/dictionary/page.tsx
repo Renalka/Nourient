@@ -45,20 +45,12 @@ export default function DictionaryPage() {
   }, [query]);
 
   return (
-    <SidebarLayout>
-      <div className="flex-1 overflow-auto bg-gray-50/50 relative">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-50">
-          <AvatarMenu />
-        </div>
-        
-        <main className="p-6 md:p-12 max-w-4xl mx-auto w-full flex flex-col pt-20 sm:pt-12">
-          <Breadcrumbs 
-            items={[
-              { label: 'Dictionary', href: '/dictionary' }
-            ]} 
-          />
-          <h1 className="text-3xl font-bold text-foreground mt-4 mb-2">Ingredient Dictionary</h1>
-          <p className="text-gray-500 mb-8">Search through thousands of standardized ingredients, natural sources, and chemical additives.</p>
+    <SidebarLayout
+      pageTitle="Ingredient Dictionary"
+      pageSubtitle="Search through thousands of standardized ingredients, natural sources, and chemical additives."
+    >
+      <div className="flex flex-col w-full h-full">
+
         
         <div className="relative mb-8">
           <input 
@@ -109,7 +101,6 @@ export default function DictionaryPage() {
             </div>
           ))}
         </div>
-      </main>
       </div>
     </SidebarLayout>
   );

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
+import SidebarLayout from '@/components/SidebarLayout';
 
 export default function AlternativesPage() {
   const { getToken } = useAuth();
@@ -47,19 +48,14 @@ export default function AlternativesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white p-6 md:p-12">
-      <div className="max-w-5xl mx-auto space-y-12">
-        <header className="border-b border-black pb-6 relative">
-          <Link href="/dashboard" className="absolute top-0 right-0 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black hover:underline underline-offset-4">
-            &larr; Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tighter uppercase">Better Alternatives</h1>
-          <p className="mt-2 text-sm text-gray-500 uppercase tracking-widest">Discover Healthier Options</p>
-        </header>
-
+    <SidebarLayout
+      pageTitle="Better Alternatives"
+      pageSubtitle="Discover Healthier Options"
+    >
+      <div className="space-y-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <section className="md:col-span-1 border border-black p-6 space-y-4 h-fit">
-            <h2 className="text-sm font-bold uppercase tracking-widest border-b border-gray-200 pb-2 mb-4">Current Product</h2>
+            <h2 className="text-lg font-serif border-b border-gray-200 pb-2 mb-4">Current Product</h2>
             
             <div>
               <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Category</label>
@@ -164,6 +160,6 @@ export default function AlternativesPage() {
           </section>
         </div>
       </div>
-    </main>
+    </SidebarLayout>
   );
 }

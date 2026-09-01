@@ -1,12 +1,12 @@
 "use client";
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
+import SidebarLayout from '@/components/SidebarLayout';
 
 export default function AuditorPage() {
   const { getToken } = useAuth();
+
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statusText, setStatusText] = useState('');
   
@@ -60,16 +60,11 @@ export default function AuditorPage() {
   };
 
   return (
-    <main className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white p-6 md:p-12">
-      <div className="max-w-4xl mx-auto space-y-12">
-        <header className="border-b border-black pb-6 relative">
-          <Link href="/dashboard" className="absolute top-0 right-0 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black hover:underline underline-offset-4">
-            &larr; Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tighter uppercase">TrueLabel Auditor</h1>
-          <p className="mt-2 text-sm text-gray-500 uppercase tracking-widest">Adversarial Marketing Analysis</p>
-        </header>
-
+    <SidebarLayout
+      pageTitle="TrueLabel Auditor"
+      pageSubtitle="Adversarial Marketing Analysis"
+    >
+      <div className="space-y-12">
         <section className="space-y-6">
           <div className="space-y-2">
             <label className="block text-xs font-bold uppercase tracking-widest text-black">
@@ -142,6 +137,6 @@ export default function AuditorPage() {
           </section>
         )}
       </div>
-    </main>
+    </SidebarLayout>
   );
 }

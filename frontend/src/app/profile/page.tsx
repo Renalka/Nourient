@@ -57,6 +57,8 @@ export default function ProfilePage() {
 
   return (
     <SidebarLayout
+      pageTitle="Profile Settings"
+      pageSubtitle="Manage your account and security"
       headerContent={
         <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
           <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -64,12 +66,7 @@ export default function ProfilePage() {
         </div>
       }
     >
-      <div className="p-8 max-w-3xl mx-auto space-y-8">
-        <Breadcrumbs />
-        <header className="mb-8 -mt-4">
-          <h1 className="text-3xl font-serif text-brand mb-2">Profile Settings</h1>
-          <p className="text-sm text-gray-500">Manage your account and security</p>
-        </header>
+      <div className="space-y-8">
 
         {(msg || error) && (
           <div className={`p-4 rounded-xl border text-sm font-medium ${error ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-brand border-brand/20'}`}>

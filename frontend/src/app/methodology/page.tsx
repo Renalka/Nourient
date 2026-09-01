@@ -6,26 +6,16 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function MethodologyPage() {
   return (
-    <SidebarLayout>
-      <div className="flex-1 overflow-auto bg-gray-50/50 relative">
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-8 z-50">
-          <AvatarMenu />
+    <SidebarLayout
+      pageTitle="Our Methodology"
+      pageSubtitle="The foundation of trust and scientifically-backed information."
+    >
+      <div className="space-y-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+        <div>
+          <p className="text-gray-600 leading-relaxed text-lg">
+            At Nourient, we believe that transparency is the foundation of trust. When you scan a product, our goal is to provide you with the most accurate, scientifically-backed information possible so you can make informed decisions about your health.
+          </p>
         </div>
-        
-        <main className="p-6 md:p-12 max-w-4xl mx-auto w-full flex flex-col pt-20 sm:pt-12">
-          <Breadcrumbs 
-            items={[
-              { label: 'Methodology & Trust', href: '/methodology' }
-            ]} 
-          />
-          
-          <div className="mt-6 space-y-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground mb-4">Our Methodology</h1>
-              <p className="text-gray-600 leading-relaxed text-lg">
-                At Nourient, we believe that transparency is the foundation of trust. When you scan a product, our goal is to provide you with the most accurate, scientifically-backed information possible so you can make informed decisions about your health.
-              </p>
-            </div>
 
             <section className="space-y-4">
               <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
@@ -66,8 +56,6 @@ export default function MethodologyPage() {
               <strong>Disclaimer:</strong> The information provided by this application is strictly for educational and informational purposes. It is not intended as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition or dietary restrictions.
             </div>
           </div>
-        </main>
-      </div>
     </SidebarLayout>
   );
 }

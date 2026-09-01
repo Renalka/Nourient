@@ -234,12 +234,7 @@ export default function ScannerPage() {
         </div>
       }
     >
-      <div className="flex flex-col h-full">
-
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto p-8 pt-4">
-          <div className="max-w-5xl mx-auto h-full flex flex-col">
-            <Breadcrumbs />
+      <div className="flex flex-col h-full w-full">
             
             {error && (
               <div className="mb-6 p-4 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium">
@@ -579,8 +574,6 @@ export default function ScannerPage() {
               </div>
             )}
 
-          </div>
-        </div>
       </div>
     </SidebarLayout>
   );

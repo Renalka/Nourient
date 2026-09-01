@@ -25,6 +25,8 @@ export default function DashboardPage() {
 
   return (
     <SidebarLayout
+      pageTitle={`Good morning, ${displayName}`}
+      pageSubtitle="Let's make better food choices today."
       headerContent={
         <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
           <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
@@ -33,22 +35,15 @@ export default function DashboardPage() {
       }
     >
       {loading ? (
-        <div className="p-8 max-w-5xl mx-auto space-y-8 animate-pulse">
-           <div className="h-10 bg-gray-200 rounded w-1/3 mb-2"></div>
-           <div className="h-4 bg-gray-100 rounded w-1/4 mb-12"></div>
+        <div className="space-y-8 animate-pulse">
            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
              <div className="lg:col-span-2 bg-gray-100 rounded-2xl h-80"></div>
              <div className="bg-gray-100 rounded-2xl h-80"></div>
            </div>
         </div>
       ) : (
-      <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in">
-        <Breadcrumbs />
-        <header className="flex justify-between items-end -mt-4">
-          <div>
-            <h1 className="text-3xl font-serif text-brand mb-2">Good morning, {displayName}</h1>
-            <p className="text-sm text-gray-500">Let's make better food choices today.</p>
-          </div>
+      <div className="space-y-8 animate-fade-in">
+        <header className="flex justify-end items-end -mt-4">
           <div className="hidden md:flex items-center gap-4">
              <div className="relative">
                <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
