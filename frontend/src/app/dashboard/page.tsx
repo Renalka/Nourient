@@ -11,6 +11,9 @@ export default function DashboardPage() {
   const displayName = user?.email?.split('@')[0] || "Guest";
 
   const [recentScans, setRecentScans] = React.useState<any[]>([]);
+  const [healthProfile, setHealthProfile] = React.useState("GENERAL");
+  const [isEditingProfile, setIsEditingProfile] = React.useState(false);
+  const [savingProfile, setSavingProfile] = React.useState(false);
 
   React.useEffect(() => {
     try {
@@ -18,10 +21,35 @@ export default function DashboardPage() {
       if (historyStr) {
         setRecentScans(JSON.parse(historyStr));
       }
+      const profileStr = localStorage.getItem('healthProfile');
+      if (profileStr) {
+        setHealthProfile(profileStr);
+      }
     } catch (e) {
       console.error(e);
     }
   }, []);
+
+  const handleSaveProfile = async (profile: string) => {
+    setSavingProfile(true);
+    try {
+      setHealthProfile(profile);
+      localStorage.setItem('healthProfile', profile);
+      
+      if (user) {
+        const token = await user.getIdToken();
+        await fetch('http://localhost:8005/api/v1/biocontext/update_profile', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+           body: JSON.stringify({ user_id: user.uid, health_profile: profile })
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setSavingProfile(false);
+    setIsEditingProfile(false);
+  };
 
   return (
     <SidebarLayout
@@ -45,10 +73,17 @@ export default function DashboardPage() {
       <div className="space-y-8 animate-fade-in">
         <header className="flex justify-end items-end -mt-4">
           <div className="hidden md:flex items-center gap-4">
-             <div className="relative">
+             <form 
+               className="relative"
+               onSubmit={(e) => {
+                 e.preventDefault();
+                 const val = new FormData(e.currentTarget).get('q') as string;
+                 if(val) window.location.href = '/dictionary?q=' + encodeURIComponent(val);
+               }}
+             >
                <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-               <input type="text" placeholder="Search products, brands..." className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:border-brand w-64" />
-             </div>
+               <input name="q" type="text" placeholder="Search products, brands..." className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:border-brand w-64" />
+             </form>
              <AvatarMenu />
           </div>
         </header>
@@ -59,19 +94,25 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
             <div className="flex justify-between items-start mb-6">
               <h2 className="font-bold text-foreground">Your Food Profile</h2>
-              <button className="text-xs font-medium text-brand hover:underline">Edit goals &rarr;</button>
+              <button onClick={() => setIsEditingProfile(true)} className="text-xs font-medium text-brand hover:underline">Edit goals &rarr;</button>
             </div>
             
             <div className="flex flex-col md:flex-row gap-8 items-center justify-center py-4">
               {/* Circular Score */}
               <div className="relative w-40 h-40 flex items-center justify-center">
-                 {/* Fake SVG Circle */}
                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                    <circle cx="50" cy="50" r="45" fill="none" stroke="#E8F0EA" strokeWidth="8" />
-                   <circle cx="50" cy="50" r="45" fill="none" stroke="#1A3224" strokeWidth="8" strokeDasharray="283" strokeDashoffset="79" strokeLinecap="round" />
+                   <circle 
+                     cx="50" cy="50" r="45" fill="none" stroke="#1A3224" strokeWidth="8" 
+                     strokeDasharray="283" 
+                     strokeDashoffset={recentScans.length > 0 ? 283 - (283 * (recentScans.reduce((acc, s) => acc + (s.score || 0), 0) / recentScans.length)) / 100 : 79} 
+                     strokeLinecap="round" 
+                   />
                  </svg>
                  <div className="absolute text-center">
-                   <div className="text-4xl font-serif text-brand">72</div>
+                   <div className="text-4xl font-serif text-brand">
+                     {recentScans.length > 0 ? Math.round(recentScans.reduce((acc, s) => acc + (s.score || 0), 0) / recentScans.length) : 72}
+                   </div>
                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">/100</div>
                  </div>
               </div>
@@ -79,10 +120,10 @@ export default function DashboardPage() {
               {/* Progress Bars */}
               <div className="flex-1 w-full space-y-4">
                 {[
-                  { label: "Nutri-Score FSA", value: 76 },
-                  { label: "NOVA ML Score", value: 45 },
-                  { label: "Protein Adequacy", value: 42 },
-                  { label: "Added Sugar", value: 39 },
+                  { label: "Nutri-Score Average", value: recentScans.length > 0 ? Math.round(recentScans.reduce((acc, s) => acc + (s.score || 0), 0) / recentScans.length) : 76 },
+                  { label: "NOVA Average", value: recentScans.length > 0 ? Math.round(recentScans.reduce((acc, s) => acc + (s.processing_score || 0), 0) / recentScans.length) : 45 },
+                  { label: "Protein Adequacy", value: healthProfile === 'GENERAL' ? 65 : 42 },
+                  { label: "Added Sugar Limit", value: healthProfile === 'DIABETIC' ? 95 : 39 },
                 ].map(stat => (
                   <div key={stat.label} className="flex items-center gap-4 text-xs font-medium">
                     <span className="w-32 text-gray-600">{stat.label}</span>
@@ -98,11 +139,13 @@ export default function DashboardPage() {
             <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
                <div>
                  <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Goal</p>
-                 <p className="text-sm font-medium text-foreground">High Protein • Low Added Sugar</p>
+                 <p className="text-sm font-medium text-foreground">
+                   {healthProfile === 'DIABETIC' ? 'Low Sugar • Glycemic Control' : healthProfile === 'HYPERTENSION' ? 'Low Sodium • Heart Health' : 'Balanced Diet • Optimal Health'}
+                 </p>
                </div>
                <div>
-                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Context</p>
-                 <p className="text-sm font-medium text-foreground">Moderate activity • 2,100 kcal/day</p>
+                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Profile</p>
+                 <p className="text-sm font-medium text-foreground">{healthProfile}</p>
                </div>
             </div>
           </div>
@@ -113,8 +156,12 @@ export default function DashboardPage() {
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden h-48 flex flex-col justify-between">
                <div className="relative z-10 w-2/3">
                  <h2 className="font-bold text-foreground mb-2">Today's Insight</h2>
-                 <p className="text-sm text-gray-600 leading-relaxed">Most cereals you scan tend to be high in added sugar.</p>
-                 <button className="text-xs font-medium text-brand hover:underline mt-4">View details &rarr;</button>
+                 <p className="text-sm text-gray-600 leading-relaxed">
+                   {recentScans.length > 0 
+                     ? `Your recently scanned product, ${recentScans[0].name}, scored ${recentScans[0].score}/100. Need better alternatives?` 
+                     : "Most cereals you scan tend to be high in added sugar."}
+                 </p>
+                 <Link href="/alternatives" className="text-xs font-medium text-brand hover:underline mt-4 inline-block">View details &rarr;</Link>
                </div>
                {/* Decorative background shape replacing image */}
                <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-brand-light rounded-full opacity-50"></div>
@@ -130,12 +177,12 @@ export default function DashboardPage() {
             </div>
 
             <div className="min-w-[140px]">
-              <div className="p-4 bg-gray-50 border border-gray-100 rounded-2xl h-full opacity-70 cursor-not-allowed flex flex-col justify-center items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-2">
+              <Link href="/dictionary" className="group p-4 bg-white border border-gray-100 rounded-2xl h-full hover:border-brand hover:shadow-md transition-all flex flex-col justify-center items-center text-center">
+                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-brand mb-2 transition-colors">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Search<br/>Database</span>
-              </div>
+                  <span className="text-[10px] font-bold text-gray-500 group-hover:text-brand uppercase tracking-widest transition-colors">Search<br/>Database</span>
+              </Link>
             </div>
 
             <div className="min-w-[140px]">
@@ -203,6 +250,52 @@ export default function DashboardPage() {
         </div>
         
       </div>
+      )}
+
+      {/* Profile Edit Modal */}
+      {isEditingProfile && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <h2 className="text-xl font-bold mb-2 text-foreground">Edit Health Profile</h2>
+            <p className="text-sm text-gray-500 mb-6">Select your primary health context. This helps Nourient tailor recommendations and alerts for you.</p>
+            
+            <div className="space-y-3 mb-8">
+              {[
+                { id: 'GENERAL', label: 'General Health', desc: 'Balanced diet and overall wellness' },
+                { id: 'DIABETIC', label: 'Diabetic / Low Sugar', desc: 'Strict glycemic control, low added sugar' },
+                { id: 'HYPERTENSION', label: 'Hypertension / Low Sodium', desc: 'Heart health, strict sodium limits' }
+              ].map(opt => (
+                <div 
+                  key={opt.id}
+                  onClick={() => setHealthProfile(opt.id)}
+                  className={`p-4 rounded-xl border cursor-pointer transition-colors ${healthProfile === opt.id ? 'border-brand bg-brand-light/20' : 'border-gray-200 hover:border-gray-300'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`font-bold ${healthProfile === opt.id ? 'text-brand' : 'text-foreground'}`}>{opt.label}</span>
+                    {healthProfile === opt.id && <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
+                  <span className="text-xs text-gray-500">{opt.desc}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setIsEditingProfile(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => handleSaveProfile(healthProfile)}
+                disabled={savingProfile}
+                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50"
+              >
+                {savingProfile ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </SidebarLayout>
   );

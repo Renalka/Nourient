@@ -3,13 +3,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import SidebarLayout from '@/components/SidebarLayout';
 import AvatarMenu from '@/components/AvatarMenu';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function DictionaryPage() {
   const [query, setQuery] = useState('');
+  
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) setQuery(q);
+  }, []);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   
