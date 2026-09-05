@@ -37,21 +37,26 @@ async def process_scanner(
         async with httpx.AsyncClient() as client:
             extract_res = await client.post(EXTRACTION_URL, files=files, timeout=60.0)
             if extract_res.status_code != 200:
-                raise HTTPException(status_code=500, detail="Extraction failed")
+                err_detail = "Extraction failed"
+                try:
+                    err_detail = extract_res.json().get("detail", err_detail)
+                except:
+                    pass
+                raise HTTPException(status_code=500, detail=err_detail)
             
             extracted_data = extract_res.json()
 
-            # 2. Concurrently call Scoring and Detective
-            tasks = [
-                client.post(SCORING_URL, json=extracted_data, timeout=30.0),
-                client.post(DETECTIVE_URL, json={"ingredients": extracted_data.get("ingredients", [])}, timeout=30.0)
-            ]
-            
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            score_res, detective_res = results
-            score_data = score_res.json() if not isinstance(score_res, Exception) and score_res.status_code == 200 else None
-            detective_data = detective_res.json() if not isinstance(detective_res, Exception) and detective_res.status_code == 200 else None
+            # 2. Call Detective FIRST to get structured ingredient safety data
+            detective_res = await client.post(DETECTIVE_URL, json={"ingredients": extracted_data.get("ingredients", [])}, timeout=30.0)
+            detective_data = detective_res.json() if detective_res.status_code == 200 else None
+
+            # 3. Call Scoring, injecting both extraction and detective data
+            scoring_payload = {
+                "extracted_data": extracted_data,
+                "detective_data": detective_data
+            }
+            score_res = await client.post(SCORING_URL, json=scoring_payload, timeout=30.0)
+            score_data = score_res.json() if score_res.status_code == 200 else None
 
             # 3. Call BioContext only for authenticated users
             bio_data = None
@@ -94,7 +99,12 @@ async def process_auditor(
         async with httpx.AsyncClient() as client:
             extract_res = await client.post(EXTRACTION_URL, files=files, timeout=60.0)
             if extract_res.status_code != 200:
-                raise HTTPException(status_code=500, detail="Extraction failed")
+                err_detail = "Extraction failed"
+                try:
+                    err_detail = extract_res.json().get("detail", err_detail)
+                except:
+                    pass
+                raise HTTPException(status_code=500, detail=err_detail)
             
             extracted_data = extract_res.json()
 

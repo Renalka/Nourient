@@ -180,13 +180,21 @@ export default function DashboardPage() {
                         : 'No ingredients detected'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-6 shrink-0">
                     <div className="flex flex-col items-end">
-                      <span className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">Score</span>
-                      <div className={`text-lg font-black ${scan.score > 75 ? 'text-green-600' : scan.score > 45 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      <span className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Nutri-Score</span>
+                      <div className={`text-base font-black ${scan.score >= 75 ? 'text-green-600' : scan.score >= 45 ? 'text-yellow-600' : 'text-red-600'}`}>
                         {scan.score}/100
                       </div>
                     </div>
+                    {scan.processing_score !== undefined && (
+                      <div className="flex flex-col items-end border-l border-gray-100 pl-6">
+                        <span className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Nourient AI</span>
+                        <div className={`text-base font-black ${scan.processing_score >= 80 ? 'text-brand' : scan.processing_score >= 50 ? 'text-yellow-700' : 'text-red-700'}`}>
+                          {scan.processing_score}/100
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

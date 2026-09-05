@@ -15,10 +15,10 @@ const getGrade = (score: number) => {
   return { letter: 'E', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', circle: 'border-red-500' };
 };
 
-const getNova = (score: number) => {
-  if (score >= 80) return { label: 'Unprocessed', color: 'text-brand', bg: 'bg-brand-light', fill: 'bg-brand' };
-  if (score >= 50) return { label: 'Processed', color: 'text-yellow-700', bg: 'bg-yellow-50', fill: 'bg-yellow-500' };
-  return { label: 'Ultra-Processed', color: 'text-red-700', bg: 'bg-red-50', fill: 'bg-red-500' };
+const getFormulationTier = (score: number) => {
+  if (score >= 80) return { label: 'Clean & Wholesome', color: 'text-brand', bg: 'bg-brand-light', fill: 'bg-brand' };
+  if (score >= 40) return { label: 'Moderately Processed', color: 'text-yellow-700', bg: 'bg-yellow-50', fill: 'bg-yellow-500' };
+  return { label: 'Highly Processed', color: 'text-red-700', bg: 'bg-red-50', fill: 'bg-red-500' };
 };
 
 export default function ScannerPage() {
@@ -38,6 +38,37 @@ export default function ScannerPage() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("Scanning image topology...");
+
+  useEffect(() => {
+    if (step === 3) {
+      setProgress(0);
+      setProgressText("Scanning image topology...");
+      
+      const texts = [
+        { time: 0, text: "Scanning image topology..." },
+        { time: 2000, text: "Extracting raw ingredients..." },
+        { time: 4000, text: "Identifying hidden additives & INS codes..." },
+        { time: 6000, text: "Cross-referencing TrueLabel database..." },
+        { time: 8000, text: "Computing final nutritional profile..." }
+      ];
+
+      const timeouts = texts.map(t => 
+        setTimeout(() => setProgressText(t.text), t.time)
+      );
+
+      const interval = setInterval(() => {
+        setProgress(prev => Math.min(prev + 0.475, 95));
+      }, 50);
+
+      return () => {
+        timeouts.forEach(clearTimeout);
+        clearInterval(interval);
+      };
+    }
+  }, [step]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -77,8 +108,26 @@ export default function ScannerPage() {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      
+      const MAX_WIDTH = 1200;
+      const MAX_HEIGHT = 1600;
+      let width = video.videoWidth;
+      let height = video.videoHeight;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -90,16 +139,56 @@ export default function ScannerPage() {
             stopCamera();
             setStep(2);
           }
-        }, 'image/jpeg', 0.9);
+        }, 'image/jpeg', 0.7);
       }
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1600;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+            if(blob) {
+                const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                resolve(new File([blob], newName, { type: 'image/jpeg' }));
+            } else {
+                resolve(file); // fallback
+            }
+        }, 'image/jpeg', 0.7);
+      };
+      img.onerror = () => resolve(file); // fallback
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
+      const compressed = await compressImage(selectedFile);
+      setFile(compressed);
+      setPreviewUrl(URL.createObjectURL(compressed));
       stopCamera();
       setStep(2); // Move to review
     }
@@ -137,7 +226,14 @@ export default function ScannerPage() {
         if (response.status === 401) {
            throw new Error("Your session expired. Please refresh the page or log in again.");
         }
-        throw new Error(`Orchestration failed: ${response.statusText}`);
+        let errBody = response.statusText;
+        try {
+          const errJson = await response.json();
+          errBody = errJson.detail || JSON.stringify(errJson);
+        } catch {
+          errBody = await response.text() || response.statusText;
+        }
+        throw new Error(`Orchestration failed: ${errBody}`);
       }
 
       const data = await response.json();
@@ -157,6 +253,7 @@ export default function ScannerPage() {
           id: Date.now(),
           name: data.extracted_data?.name || "Unnamed Product",
           score: data.score?.nutritional_quality_score || 0,
+          processing_score: data.score?.processing_score || 0,
           ingredients: data.extracted_data?.ingredients || [],
           timestamp: new Date().toISOString()
         };
@@ -344,10 +441,23 @@ export default function ScannerPage() {
             )}
 
             {step === 3 && (
-              <div className="flex-1 flex flex-col items-center justify-center space-y-6">
-                <div className="w-16 h-16 border-4 border-brand-light border-t-brand rounded-full animate-spin"></div>
-                <h2 className="text-xl font-serif text-brand">Orchestrating AI Agents...</h2>
-                <p className="text-sm text-gray-500">Extracting data, cross-referencing claims, computing scores.</p>
+              <div className="flex-1 flex flex-col items-center justify-center max-w-md mx-auto w-full px-4 space-y-8 animate-fade-in">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-serif text-brand">Analyzing Product</h2>
+                  <p className="text-sm text-gray-500 h-6 transition-all">{progressText}</p>
+                </div>
+                
+                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden shadow-inner">
+                  <div 
+                    className="bg-brand h-full rounded-full transition-all duration-75 ease-out relative"
+                    style={{ width: `${progress}%` }}
+                  >
+                    <div className="absolute inset-0 bg-white/20 w-full h-full"></div>
+                  </div>
+                </div>
+                <div className="text-xs font-bold tracking-widest uppercase text-gray-400">
+                  {Math.round(progress)}%
+                </div>
               </div>
             )}
 
@@ -410,13 +520,13 @@ export default function ScannerPage() {
                            
                            {/* Progress Bar */}
                            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-                             <div className={`h-full rounded-full ${getNova(result.score.processing_score).fill}`} style={{ width: `${result.score.processing_score}%` }}></div>
+                             <div className={`h-full rounded-full ${getFormulationTier(result.score.processing_score).fill}`} style={{ width: `${result.score.processing_score}%` }}></div>
                            </div>
                            
                            <div className="flex justify-between items-center">
-                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nova Index</p>
-                             <span className={`text-[10px] font-bold uppercase tracking-widest ${getNova(result.score.processing_score).color}`}>
-                               {getNova(result.score.processing_score).label}
+                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Nourient AI</p>
+                             <span className={`text-[10px] font-bold uppercase tracking-widest ${getFormulationTier(result.score.processing_score).color}`}>
+                               {getFormulationTier(result.score.processing_score).label}
                              </span>
                            </div>
                         </div>

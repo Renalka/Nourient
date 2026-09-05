@@ -41,8 +41,7 @@ class GeminiEngine(IAIEngine):
             try:
                 response = await self.model.generate_content_async(
                     contents=[prompt, image_parts[0]],
-                    generation_config=generation_config,
-                    request_options={"timeout": 120} # Force a long timeout for vision tasks
+                    generation_config=generation_config
                 )
                 break # Success! Break the loop
             except DeadlineExceeded as e:
