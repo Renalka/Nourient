@@ -134,24 +134,26 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Bottom fade bridge to next section */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#F9F9F7] to-transparent pointer-events-none" />
+
       </section>
 
       {/* ── MARQUEE TICKER ───────────────────────────────────── */}
-      <div className="bg-[#F9F9F7] py-5 border-y border-gray-200 overflow-hidden">
+      <div className="bg-black pt-8 pb-16 overflow-hidden z-20 relative">
         <div className="marquee-track">
           {tickerItems.map((item, i) => (
-            <span key={i} className="flex items-center gap-3 pr-10 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
-              <span className="w-1 h-1 rounded-full bg-gray-300 flex-shrink-0" />
+            <span key={i} className="flex items-center gap-3 pr-10 text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+              <span className="w-1 h-1 rounded-full bg-gray-700 flex-shrink-0" />
               {item}
             </span>
           ))}
         </div>
       </div>
 
-      {/* ── REST OF CONTENT on white/off-white background ─────── */}
-      <div className="bg-[#F9F9F7]">
+
+      
+
+      {/* ── REST OF CONTENT (Overlapping Sheet) ─────── */}
+      <div className="bg-[#F9F9F7] relative z-30 rounded-t-[2.5rem] md:rounded-t-[4rem] shadow-[0_-20px_60px_rgba(0,0,0,0.8)] -mt-6">
         <div className="max-w-7xl mx-auto px-8 pb-40 flex flex-col gap-0">
 
           {/* ── HOW IT WORKS ─────────────────────────────────── */}
@@ -183,9 +185,9 @@ export default function LandingPage() {
               <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-3">Features</p>
               <h2 className="text-4xl font-serif text-gray-900">Powerful tools. Built on science.</h2>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-gray-200 rounded-3xl overflow-hidden border border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 reveal gap-px bg-gray-200 rounded-3xl overflow-hidden border border-gray-200">
               {features.map((f, i) => (
-                <div key={i} className="reveal bg-white p-10 hover:bg-gray-50 transition-colors duration-200 group">
+                <div key={i} className="bg-white p-10 hover:bg-gray-50 transition-colors duration-200 group">
                   <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-6 group-hover:border-gray-300 transition-colors">
                     <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={f.icon} />
