@@ -246,7 +246,7 @@ export default function LandingPage() {
                     </p>
                   </div>
                   <div className="mt-12">
-                    <Link href="/auditor">
+                    <Link href="/methodology">
                       <button className="group flex items-center gap-3 text-white text-sm font-bold hover:gap-4 transition-all">
                         Read our methodology
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>

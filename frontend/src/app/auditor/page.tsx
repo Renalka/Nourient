@@ -81,14 +81,14 @@ export default function AuditorPage() {
               />
               <button
                 onClick={handleUpload}
-                disabled={!file || loading}
+                disabled={!file || isLoading}
                 className="w-full md:w-auto px-8 py-2.5 bg-black text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? 'Auditing...' : 'Run Audit'}
+                {isLoading ? 'Auditing...' : 'Run Audit'}
               </button>
             </div>
             
-            {loading && statusText && (
+            {isLoading && statusText && (
               <div className="mt-4 text-xs font-bold uppercase tracking-widest text-gray-500 animate-pulse">
                 &gt; {statusText}
               </div>

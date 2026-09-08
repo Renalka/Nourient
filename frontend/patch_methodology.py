@@ -1,6 +1,12 @@
-'use client';
+import re
+
+with open('src/app/methodology/page.tsx', 'r') as f:
+    content = f.read()
+
+new_content = """'use client';
 
 import SidebarLayout from '@/components/SidebarLayout';
+import Link from 'next/link';
 
 export default function MethodologyPage() {
   return (
@@ -66,7 +72,7 @@ export default function MethodologyPage() {
             <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 3</span>
             <h3 className="font-bold text-gray-900 mb-3">UPF Scoring</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              A trained regression model evaluates the formulation&apos;s Ultra-Processed Food (UPF) density. It weighs the ratio of whole foods against synthetics, assigning a composite score between 0 and 100.
+              A trained regression model evaluates the formulation's Ultra-Processed Food (UPF) density. It weighs the ratio of whole foods against synthetics, assigning a composite score between 0 and 100.
             </p>
           </div>
 
@@ -79,7 +85,7 @@ export default function MethodologyPage() {
             <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 4</span>
             <h3 className="font-bold text-gray-900 mb-3">TrueLabel Audit</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Marketing claims are cross-examined against the chemical reality. If a product claims &quot;No Sugar Added&quot; but contains high-glycemic Maltodextrin, the auditor flags it as deceptive.
+              Marketing claims are cross-examined against the chemical reality. If a product claims "No Sugar Added" but contains high-glycemic Maltodextrin, the auditor flags it as deceptive.
             </p>
           </div>
 
@@ -128,7 +134,7 @@ export default function MethodologyPage() {
         <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm flex flex-col">
           <h2 className="text-sm font-bold tracking-[0.2em] text-gray-400 uppercase mb-6">Origin Classification</h2>
           <p className="text-sm text-gray-600 leading-relaxed mb-8">
-            Ingredients are classified strictly by their manufacturing origin, cutting through ambiguous marketing terms like &quot;all natural&quot;.
+            Ingredients are classified strictly by their manufacturing origin, cutting through ambiguous marketing terms like "all natural".
           </p>
 
           <div className="grid grid-cols-1 gap-4 flex-1">
@@ -167,3 +173,7 @@ export default function MethodologyPage() {
     </SidebarLayout>
   );
 }
+"""
+
+with open('src/app/methodology/page.tsx', 'w') as f:
+    f.write(new_content)
