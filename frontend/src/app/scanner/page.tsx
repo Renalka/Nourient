@@ -207,18 +207,20 @@ export default function ScannerPage() {
 
     try {
       const token = await getToken();
-      const idToken = token || 'anonymous';
 
       const endpoint = isEnhanced 
         ? 'http://localhost:8003/api/v1/orchestrate/enhanced_scanner' 
         : 'http://localhost:8003/api/v1/orchestrate/scanner';
 
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       // Step 1: ADK Orchestrator
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${idToken}`
-        },
+        headers,
         body: formData,
       });
 
@@ -481,7 +483,7 @@ export default function ScannerPage() {
               <div className="space-y-8 animate-fade-in pb-12">
                  {/* Hero Header */}
                  <div className="relative w-full h-48 rounded-3xl overflow-hidden mb-8 shadow-sm group">
-                   <img src="/assets/bg/fresh_food.jpg" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" alt="Product analysis header" />
+                   <img src="/assets/bg/scan-results.png" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" alt="Product analysis header" />
                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                    
                    <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
