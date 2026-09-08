@@ -46,3 +46,37 @@ async def dictionary_search(q: str):
     except Exception as e:
         logger.error(f"Dictionary search failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+from services.detective.core.enhanced_decoder import EnhancedIngredientDecoder
+
+try:
+    enhanced_decoder = EnhancedIngredientDecoder()
+except Exception as e:
+    logger.error(f"Failed to load EnhancedIngredientDecoder: {e}")
+    enhanced_decoder = None
+
+@router.post("/enhanced_analyze")
+async def enhanced_analyze_ingredients(payload: IngredientPayload):
+    try:
+        if not enhanced_decoder:
+            raise HTTPException(status_code=503, detail="Enhanced vector engine not initialized.")
+            
+        logger.info(f"Enhanced Analyzing {len(payload.ingredients)} ingredients...")
+        
+        # 1. BigQuery Flagger (for complex ingredients without INS codes)
+        flagged = detective.analyze_ingredients(payload.ingredients)
+        
+        # 2. Enhanced Vector Decoder (Semantic Search)
+        decoded_additives = enhanced_decoder.decode_ingredients(payload.ingredients)
+        
+        logger.info(f"Enhanced Detective found {len(flagged)} complex items and decoded {len(decoded_additives)} items via semantic search.")
+        
+        return {
+            "flagged_ingredients": flagged,
+            "decoded_additives": decoded_additives,
+            "is_enhanced": True
+        }
+    except Exception as e:
+        logger.error(f"Enhanced Detective failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

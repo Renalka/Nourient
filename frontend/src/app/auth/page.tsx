@@ -32,7 +32,7 @@ export default function AuthPage() {
 
         <div className="pt-4 text-center border-t border-gray-100">
           <Link 
-            href="/dashboard" 
+            href="/scanner" 
             className="text-sm font-medium text-gray-400 hover:text-brand transition-colors"
           >
             Continue as Guest

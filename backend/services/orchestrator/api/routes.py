@@ -83,6 +83,66 @@ async def process_scanner(
         logger.error(f"Scanner Orchestration error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/enhanced_scanner")
+async def process_enhanced_scanner(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_optional_user_id)
+):
+    """
+    Enhanced route that uses Vector DB semantic search for ingredients.
+    """
+    try:
+        # 1. Extraction
+        file_bytes = await file.read()
+        files = {"file": (file.filename, file_bytes, file.content_type)}
+        
+        async with httpx.AsyncClient() as client:
+            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=60.0)
+            if extract_res.status_code != 200:
+                err_detail = "Extraction failed"
+                try: err_detail = extract_res.json().get("detail", err_detail)
+                except: pass
+                raise HTTPException(status_code=500, detail=err_detail)
+            
+            extracted_data = extract_res.json()
+
+            # 2. Call Enhanced Detective FIRST
+            ENHANCED_DETECTIVE_URL = "http://127.0.0.1:8004/api/v1/detective/enhanced_analyze"
+            detective_res = await client.post(ENHANCED_DETECTIVE_URL, json={"ingredients": extracted_data.get("ingredients", [])}, timeout=30.0)
+            detective_data = detective_res.json() if detective_res.status_code == 200 else None
+
+            # 3. Call Scoring
+            scoring_payload = {
+                "extracted_data": extracted_data,
+                "detective_data": detective_data
+            }
+            score_res = await client.post(SCORING_URL, json=scoring_payload, timeout=30.0)
+            score_data = score_res.json() if score_res.status_code == 200 else None
+
+            # 4. Call BioContext
+            bio_data = None
+            if score_data and user_id != "anonymous":
+                master_score = int((score_data.get("nutritional_quality_score", 50) + score_data.get("processing_score", 50)) / 2)
+                bio_payload = {
+                    "user_id": user_id,
+                    "product_data": extracted_data,
+                    "base_score": master_score
+                }
+                bio_res = await client.post(BIOCONTEXT_URL, json=bio_payload, timeout=30.0)
+                if bio_res.status_code == 200:
+                    bio_data = bio_res.json()
+
+            return {
+                "extracted_data": extracted_data,
+                "score": score_data,
+                "detective": detective_data,
+                "biocontext": bio_data
+            }
+
+    except Exception as e:
+        logger.error(f"Enhanced Scanner Orchestration error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/auditor")
 async def process_auditor(
     file: UploadFile = File(...)

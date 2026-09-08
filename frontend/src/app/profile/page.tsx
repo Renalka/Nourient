@@ -34,7 +34,8 @@ export default function ProfilePage() {
       await sendEmailVerification(user);
       setMsg("Verification email sent! Please check your inbox.");
     } catch (err: any) {
-      setError(err.message || "Failed to send verification email.");
+      console.error(err);
+      setError("Failed to send verification email. Please try again later.");
     }
   };
 
@@ -46,7 +47,8 @@ export default function ProfilePage() {
       await sendPasswordResetEmail(auth, user.email);
       setMsg("Password reset email sent! Please check your inbox.");
     } catch (err: any) {
-      setError(err.message || "Failed to send reset email.");
+      console.error(err);
+      setError("Failed to send reset email. Please try again later.");
     }
   };
 

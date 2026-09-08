@@ -89,14 +89,14 @@ class ScoringEngine:
                 if processing_score >= 80:
                     formulation_tier = "Clean & Wholesome"
                 elif processing_score >= 40:
-                    formulation_tier = "Moderately Processed"
+                    formulation_tier = "Fair Formulation"
                 else:
-                    formulation_tier = "Highly Processed"
+                    formulation_tier = "Poor Formulation"
                     
             except Exception as e:
                 print(f"ML Inference Error: {e}")
         
-        recommendation = "CONSUME FREQUENTLY"
+        recommendation = "CAN BE CONSUMED FREQUENTLY"
         if quality_score < 40 or processing_score < 40:
             recommendation = "LIMIT CONSUMPTION"
         elif quality_score < 70 or processing_score < 70:

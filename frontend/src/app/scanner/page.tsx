@@ -17,8 +17,8 @@ const getGrade = (score: number) => {
 
 const getFormulationTier = (score: number) => {
   if (score >= 80) return { label: 'Clean & Wholesome', color: 'text-brand', bg: 'bg-brand-light', fill: 'bg-brand' };
-  if (score >= 40) return { label: 'Moderately Processed', color: 'text-yellow-700', bg: 'bg-yellow-50', fill: 'bg-yellow-500' };
-  return { label: 'Highly Processed', color: 'text-red-700', bg: 'bg-red-50', fill: 'bg-red-500' };
+  if (score >= 40) return { label: 'Fair Formulation', color: 'text-yellow-700', bg: 'bg-yellow-50', fill: 'bg-yellow-500' };
+  return { label: 'Poor Formulation', color: 'text-red-700', bg: 'bg-red-50', fill: 'bg-red-500' };
 };
 
 export default function ScannerPage() {
@@ -70,11 +70,7 @@ export default function ScannerPage() {
     }
   }, [step]);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth");
-    }
-  }, [user, loading, router]);
+
 
   useEffect(() => {
     return () => { stopCamera(); };
@@ -201,7 +197,7 @@ export default function ScannerPage() {
     setError(null);
   };
 
-  const processImage = async () => {
+  const processImage = async (isEnhanced = false) => {
     if (!file) return;
     setStep(3); // Analyzing
     setError(null);
@@ -213,8 +209,12 @@ export default function ScannerPage() {
       const token = await getToken();
       const idToken = token || 'anonymous';
 
+      const endpoint = isEnhanced 
+        ? 'http://localhost:8003/api/v1/orchestrate/enhanced_scanner' 
+        : 'http://localhost:8003/api/v1/orchestrate/scanner';
+
       // Step 1: ADK Orchestrator
-      const response = await fetch('http://localhost:8003/api/v1/orchestrate/scanner', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${idToken}`
@@ -233,7 +233,8 @@ export default function ScannerPage() {
         } catch {
           errBody = await response.text() || response.statusText;
         }
-        throw new Error(`Orchestration failed: ${errBody}`);
+        console.error(`Orchestration failed: ${errBody}`);
+        throw new Error("Our servers are currently experiencing issues analyzing this product. Please try again in a few moments.");
       }
 
       const data = await response.json();
@@ -246,22 +247,25 @@ export default function ScannerPage() {
       setResult(data);
       
       // Save to recent scans history (max 5)
-      try {
-        const historyStr = localStorage.getItem('recentScans');
-        let history = historyStr ? JSON.parse(historyStr) : [];
-        const newScan = {
-          id: Date.now(),
-          name: data.extracted_data?.name || "Unnamed Product",
-          score: data.score?.nutritional_quality_score || 0,
-          processing_score: data.score?.processing_score || 0,
-          ingredients: data.extracted_data?.ingredients || [],
-          timestamp: new Date().toISOString()
-        };
-        history.unshift(newScan);
-        history = history.slice(0, 5); // Keep only last 5
-        localStorage.setItem('recentScans', JSON.stringify(history));
-      } catch (e) {
-        console.error("Failed to save history", e);
+      if (user) {
+        try {
+          const scanKey = `recentScans_${user.uid}`;
+          const historyStr = localStorage.getItem(scanKey);
+          let history = historyStr ? JSON.parse(historyStr) : [];
+          const newScan = {
+            id: Date.now(),
+            name: data.extracted_data?.name || "Unnamed Product",
+            score: data.score?.nutritional_quality_score || 0,
+            processing_score: data.score?.processing_score || 0,
+            ingredients: data.extracted_data?.ingredients || [],
+            timestamp: new Date().toISOString()
+          };
+          history.unshift(newScan);
+          history = history.slice(0, 5); // Keep only last 5
+          localStorage.setItem(scanKey, JSON.stringify(history));
+        } catch (e) {
+          console.error("Failed to save history", e);
+        }
       }
       
       setStep(4); // Results
@@ -273,7 +277,12 @@ export default function ScannerPage() {
   };
 
   const handleAddToBasket = async () => {
-    if (!user || !result?.extracted_data) return;
+    if (!user) {
+      setBasketMsg('Please log in to use the Basket feature');
+      setTimeout(() => setBasketMsg(''), 3000);
+      return;
+    }
+    if (!result?.extracted_data) return;
     setAddingToBasket(true);
     try {
       const token = await getToken();
@@ -303,7 +312,7 @@ export default function ScannerPage() {
     }
   };
 
-  if (loading || !user) return null;
+  if (loading) return null;
 
   return (
     <SidebarLayout
@@ -420,21 +429,28 @@ export default function ScannerPage() {
                    </div>
 
                    {/* Bottom Controls */}
-                   <div className="flex justify-center items-center gap-12 mt-4 pt-4 border-t border-gray-100 w-full">
-                     <button onClick={step === 1 ? (isCameraActive ? stopCamera : startCamera) : handleRetake} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-32">
-                       {step === 1 ? (isCameraActive ? 'Cancel' : 'Open Camera') : 'Retake'}
+                   <div className="flex justify-center items-center gap-4 mt-4 pt-4 border-t border-gray-100 w-full flex-wrap">
+                     <button onClick={step === 1 ? (isCameraActive ? stopCamera : startCamera) : handleRetake} className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-28 text-center">
+                       {step === 1 ? (isCameraActive ? 'Cancel' : 'Camera') : 'Retake'}
                      </button>
                      
                      <div 
-                        onClick={step === 1 ? (isCameraActive ? capturePhoto : startCamera) : processImage}
-                        className="w-16 h-16 rounded-full border-4 border-gray-200 flex items-center justify-center cursor-pointer hover:border-brand transition-colors"
+                        onClick={step === 1 ? (isCameraActive ? capturePhoto : startCamera) : () => processImage(false)}
+                        className={`w-16 h-16 rounded-full border-4 border-gray-200 flex items-center justify-center cursor-pointer hover:border-brand transition-colors ${step === 2 ? 'hidden' : ''}`}
                       >
                        <div className={`w-12 h-12 rounded-full shadow-md ${isCameraActive ? 'bg-red-500' : 'bg-brand'}`}></div>
                      </div>
                      
-                     <button onClick={step === 1 ? () => uploadInputRef.current?.click() : processImage} className="px-6 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-32">
-                       {step === 1 ? 'Upload File' : 'Analyze'}
+                     <button onClick={step === 1 ? () => uploadInputRef.current?.click() : () => processImage(false)} className={`px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm ${step === 2 ? 'w-32 bg-gray-100' : 'w-28'}`}>
+                       {step === 1 ? 'Upload' : 'Analyze'}
                      </button>
+
+                     {step === 2 && (
+                       <button onClick={() => processImage(true)} className="px-4 py-2 bg-brand border border-brand rounded-full text-xs font-bold text-white hover:bg-brand-dark transition-colors shadow-sm w-32 flex items-center justify-center gap-2">
+                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                         Enhanced
+                       </button>
+                     )}
                    </div>
                 </div>
               </div>
@@ -463,20 +479,26 @@ export default function ScannerPage() {
 
             {step === 4 && result && (
               <div className="space-y-8 animate-fade-in pb-12">
-                 <div className="flex justify-between items-start">
-                   <div>
-                     <h1 className="text-3xl font-serif text-brand mb-1">{result.extracted_data?.name || 'Unnamed Product'}</h1>
-                     <p className="text-sm text-gray-500">{result.extracted_data?.brand || 'Unknown Brand'} • {result.extracted_data?.category || 'Uncategorized'}</p>
-                   </div>
-                   <div className="flex flex-col items-end">
-                     <button 
-                       onClick={handleAddToBasket} 
-                       disabled={addingToBasket}
-                       className="px-6 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50 transition-colors"
-                     >
-                       {addingToBasket ? 'Adding...' : 'Add to Basket'}
-                     </button>
-                     {basketMsg && <span className="text-xs text-brand mt-2 font-medium">{basketMsg}</span>}
+                 {/* Hero Header */}
+                 <div className="relative w-full h-48 rounded-3xl overflow-hidden mb-8 shadow-sm group">
+                   <img src="/assets/bg/fresh_food.jpg" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" alt="Product analysis header" />
+                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                   
+                   <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
+                     <div className="text-white">
+                       <h1 className="text-3xl font-serif mb-1 drop-shadow-md">{result.extracted_data?.name || 'Unnamed Product'}</h1>
+                       <p className="text-sm text-white/90 font-medium drop-shadow-sm">{result.extracted_data?.brand || 'Unknown Brand'} • {result.extracted_data?.category || 'Uncategorized'}</p>
+                     </div>
+                     <div className="flex flex-col items-end">
+                       <button 
+                         onClick={handleAddToBasket} 
+                         disabled={addingToBasket}
+                         className="px-6 py-2 bg-white text-brand rounded-xl text-sm font-bold hover:bg-gray-50 hover:scale-105 active:scale-95 disabled:opacity-50 transition-all shadow-md"
+                       >
+                         {addingToBasket ? 'Adding...' : 'Add to Basket'}
+                       </button>
+                       {basketMsg && <span className="text-xs text-white mt-2 font-medium bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full">{basketMsg}</span>}
+                     </div>
                    </div>
                  </div>
 
@@ -484,13 +506,16 @@ export default function ScannerPage() {
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Nutri-Score Widget */}
                     {result.score && (
-                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                         <div className="absolute -right-6 -top-6 w-24 h-24 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
-                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 relative z-10">Nutritional Quality</h2>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-6 relative z-10 flex items-center gap-1.5">
+                          <svg className="w-3 h-3 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                          Nutritional Quality
+                        </h2>
                         
                         <div className="flex items-end justify-between relative z-10">
                           <div>
-                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-sm mb-3 ${getGrade(result.score.nutritional_quality_score).fill || 'bg-brand'}`}>
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black text-white shadow-md mb-3 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${getGrade(result.score.nutritional_quality_score).fill || 'bg-brand'}`}>
                               {getGrade(result.score.nutritional_quality_score).letter}
                             </div>
                             <p className="text-3xl font-serif text-foreground leading-none">{result.score.nutritional_quality_score}</p>
@@ -498,7 +523,7 @@ export default function ScannerPage() {
                           </div>
                           
                           <div className="text-right">
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${getGrade(result.score.nutritional_quality_score).bg} ${getGrade(result.score.nutritional_quality_score).color}`}>
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${getGrade(result.score.nutritional_quality_score).bg} ${getGrade(result.score.nutritional_quality_score).color}`}>
                               Grade {getGrade(result.score.nutritional_quality_score).letter}
                             </span>
                           </div>
@@ -508,19 +533,22 @@ export default function ScannerPage() {
 
                     {/* NOVA ML Widget */}
                     {result.score && (
-                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
+                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                         <div className="absolute -left-6 -bottom-6 w-32 h-32 bg-gray-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
-                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-6 relative z-10 flex justify-between">
-                          <span>Processing Level</span>
-                          <span className="bg-brand text-white px-2 py-0.5 rounded text-[8px] tracking-widest">AI MODEL</span>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-6 relative z-10 flex justify-between items-center">
+                          <span className="flex items-center gap-1.5">
+                            <svg className="w-3 h-3 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                            Formulation Quality
+                          </span>
+                          <span className="bg-brand text-white px-2 py-0.5 rounded text-[8px] tracking-widest shadow-sm animate-pulse">AI MODEL</span>
                         </h2>
                         
                         <div className="flex flex-col justify-end h-full relative z-10">
                            <p className="text-3xl font-serif text-foreground leading-none mb-2">{result.score.processing_score}</p>
                            
                            {/* Progress Bar */}
-                           <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-                             <div className={`h-full rounded-full ${getFormulationTier(result.score.processing_score).fill}`} style={{ width: `${result.score.processing_score}%` }}></div>
+                           <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-3">
+                             <div className={`h-full rounded-full transition-all duration-1000 ease-out ${getFormulationTier(result.score.processing_score).fill}`} style={{ width: `${result.score.processing_score}%` }}></div>
                            </div>
                            
                            <div className="flex justify-between items-center">
@@ -535,9 +563,12 @@ export default function ScannerPage() {
 
                     {/* Metabolic Fit Widget */}
                     {result.biocontext ? (
-                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-md transition-shadow">
-                        <div className="absolute right-0 top-0 w-full h-full bg-gradient-to-br from-white to-brand-light/30 opacity-50"></div>
-                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 relative z-10">Metabolic Fit</h2>
+                      <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between relative overflow-hidden group hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div className="absolute right-0 top-0 w-full h-full bg-gradient-to-br from-white to-brand-light/30 opacity-50 group-hover:opacity-70 transition-opacity duration-300"></div>
+                        <h2 className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-4 relative z-10 flex items-center gap-1.5">
+                          <svg className="w-3 h-3 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                          Metabolic Fit
+                        </h2>
                         
                         <div className="relative z-10 flex flex-col h-full justify-between">
                           <div>
@@ -548,17 +579,17 @@ export default function ScannerPage() {
                               </span>
                               <span className="text-xs font-bold text-brand uppercase tracking-widest">{result.biocontext.health_profile}</span>
                             </div>
-                            <p className="text-3xl font-serif text-brand leading-none mb-1">{result.biocontext.metabolic_fit_score}</p>
+                            <p className="text-3xl font-serif text-brand leading-none mb-1 group-hover:scale-105 origin-left transition-transform duration-300">{result.biocontext.metabolic_fit_score}</p>
                           </div>
                           
-                          <p className="text-xs text-gray-500 leading-snug line-clamp-2" title={result.biocontext.context_reasoning}>
+                          <p className="text-xs text-gray-600 leading-snug line-clamp-2" title={result.biocontext.context_reasoning}>
                             {result.biocontext.context_reasoning}
                           </p>
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-gray-50 p-6 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mb-3 text-gray-400">
+                      <div className="bg-gray-50 p-6 rounded-3xl border border-dashed border-gray-200 flex flex-col items-center justify-center text-center group hover:bg-gray-100 transition-colors duration-300">
+                         <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mb-3 text-gray-400 group-hover:text-gray-500 transition-colors">
                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                          </div>
                          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Metabolic Fit</h3>
@@ -575,7 +606,7 @@ export default function ScannerPage() {
                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                        </div>
                        <div>
-                         <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-700' : 'text-brand'}`}>Nourient's Recommendation</p>
+                         <p className={`text-xs font-bold uppercase tracking-widest mb-1 ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-700' : 'text-brand'}`}>Nourient&apos;s Recommendation</p>
                          <p className={`text-lg font-serif leading-none ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-900' : 'text-brand-dark'}`}>{result.score.overall_recommendation}</p>
                        </div>
                      </div>
@@ -595,7 +626,7 @@ export default function ScannerPage() {
                           {result.extracted_data.audit.map((audit: any, idx: number) => (
                             <div key={idx} className={`p-4 rounded-xl border-l-4 ${audit.verdict === 'Deceptive' ? 'border-red-500 bg-red-50' : 'border-green-500 bg-brand-light'}`}>
                               <div className="flex justify-between items-start mb-2">
-                                <span className="font-bold text-sm text-foreground">"{audit.claim}"</span>
+                                <span className="font-bold text-sm text-foreground">&quot;{audit.claim}&quot;</span>
                                 <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full ${audit.verdict === 'Deceptive' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-brand'}`}>
                                   {audit.verdict}
                                 </span>

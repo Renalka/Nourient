@@ -21,7 +21,8 @@ export default function AuthWidget() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      setError(err.message || "Failed to sign in");
+      console.error(err);
+      setError("Failed to sign in with Google. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -74,13 +75,11 @@ export default function AuthWidget() {
         await sendEmailVerification(userCredential.user);
       }
     } catch (err: any) {
-      let msg = err.message;
-      if (msg.includes("auth/invalid-credential") || msg.includes("auth/user-not-found") || msg.includes("auth/wrong-password")) {
+      console.error(err);
+      let msg = "An unexpected authentication error occurred. Please try again.";
+      if (err.message?.includes("auth/invalid-credential") || err.message?.includes("auth/user-not-found") || err.message?.includes("auth/wrong-password")) {
         msg = "Invalid email or password.";
-      } else if (msg.includes("auth/email-already-in-use")) {
-        // We technically shouldn't leak this per OWASP, but for UX it's often standard.
-        // To be strictly secure against enumeration: "If this email is not registered, we have sent a link..."
-        // But since this is a consumer app, we will use a generic but clear message.
+      } else if (err.message?.includes("auth/email-already-in-use")) {
         msg = "An account with this email already exists.";
       }
       setError(msg);

@@ -16,27 +16,42 @@ export default function DashboardPage() {
   const [savingProfile, setSavingProfile] = React.useState(false);
 
   React.useEffect(() => {
+    if (!loading && !user) {
+      window.location.href = "/auth";
+    }
+  }, [user, loading]);
+
+  React.useEffect(() => {
+    if (loading || !user) return;
     try {
-      const historyStr = localStorage.getItem('recentScans');
+      const scanKey = `recentScans_${user.uid}`;
+      const historyStr = localStorage.getItem(scanKey);
       if (historyStr) {
         setRecentScans(JSON.parse(historyStr));
+      } else {
+        setRecentScans([]);
       }
-      const profileStr = localStorage.getItem('healthProfile');
+      
+      const profileKey = `healthProfile_${user.uid}`;
+      const profileStr = localStorage.getItem(profileKey);
       if (profileStr) {
         setHealthProfile(profileStr);
+      } else {
+        setHealthProfile("GENERAL");
       }
     } catch (e) {
       console.error(e);
     }
-  }, []);
+  }, [user, loading]);
 
   const handleSaveProfile = async (profile: string) => {
     setSavingProfile(true);
     try {
       setHealthProfile(profile);
-      localStorage.setItem('healthProfile', profile);
-      
       if (user) {
+        const profileKey = `healthProfile_${user.uid}`;
+        localStorage.setItem(profileKey, profile);
+        
         const token = await user.getIdToken();
         await fetch('http://localhost:8005/api/v1/biocontext/update_profile', {
            method: 'POST',
@@ -50,6 +65,8 @@ export default function DashboardPage() {
     setSavingProfile(false);
     setIsEditingProfile(false);
   };
+
+  if (loading || !user) return null;
 
   return (
     <SidebarLayout

@@ -22,7 +22,7 @@ export default function AuditorPage() {
   const handleUpload = async () => {
     if (!file) return;
 
-    setLoading(true);
+    setIsLoading(true);
     setError(null);
     setStatusText('Running TrueLabel AI Audit...');
 
@@ -44,7 +44,8 @@ export default function AuditorPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Audit failed: ${errorText}`);
+        console.error(`Audit failed: ${errorText}`);
+        throw new Error('An unexpected server error occurred while running the audit. Please try again later.');
       }
 
       const data = await response.json();
@@ -54,7 +55,7 @@ export default function AuditorPage() {
     } catch (err: any) {
       setError(err.message || 'An error occurred during audit.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
       setStatusText('');
     }
   };
