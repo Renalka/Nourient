@@ -31,6 +31,8 @@ class ClaimsEngine:
         for claim in claims:
             # Create the embedding for the query
             query_emb = self.emb_fn([claim])[0]
+            if hasattr(query_emb, 'tolist'):
+                query_emb = query_emb.tolist()
 
             # 1. Check Buzzwords (Namespace: buzzwords)
             b_res = self.index.query(
