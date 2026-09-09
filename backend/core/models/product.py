@@ -55,3 +55,73 @@ class FoodDecisionProfile(BaseModel):
     value_score: Optional[int] = None
     overall_recommendation: str
     reasoning: str
+
+class HealthHalo(BaseModel):
+    visual_cues: List[str]
+    deception_index: int
+    reasoning: str
+
+class TargetAudience(BaseModel):
+    demographic: str
+    indicators: List[str]
+    concerns: List[str]
+
+class ProminentIngredient(BaseModel):
+    name: str
+    implied_quantity: str
+    reality_check: str
+
+class FrontOfPackData(BaseModel):
+    health_halo: Optional[HealthHalo] = None
+    target_audience: Optional[TargetAudience] = None
+    prominent_ingredients: List[ProminentIngredient] = []
+    explicit_claims: List[str] = []
+    error: Optional[str] = None
+    error_message: Optional[str] = None
+
+class StatedServing(BaseModel):
+    amount: float
+    unit: str
+    description: str
+
+class AnalyzedServing(BaseModel):
+    realistic_amount: float
+    unit: str
+    is_loophole: bool
+    loophole_warning: str
+    multiplier: float
+
+class EmptyCalorieData(BaseModel):
+    ratio: float
+    empty_calories: float
+    nutrient_calories: float
+
+class ThresholdWarning(BaseModel):
+    nutrient: str
+    amount_in_realistic_serving: float
+    unit: str
+    percentage_of_adi: float
+    warning_message: str
+
+class RawNutritionTable(BaseModel):
+    calories_per_100g: float
+    sugar_per_100g: float
+    fiber_per_100g: float
+    protein_per_100g: float
+    sodium_per_100g: float
+    fat_per_100g: float
+    sat_fat_per_100g: float
+
+class NutritionExtractionData(BaseModel):
+    stated_serving: Optional[StatedServing] = None
+    raw_table: Optional[RawNutritionTable] = None
+    error: Optional[str] = None
+    error_message: Optional[str] = None
+
+class NutritionAnalysisData(BaseModel):
+    stated_serving: Optional[StatedServing] = None
+    analyzed_serving: Optional[AnalyzedServing] = None
+    empty_calorie_ratio: Optional[EmptyCalorieData] = None
+    threshold_warnings: List[ThresholdWarning] = []
+    error: Optional[str] = None
+    error_message: Optional[str] = None

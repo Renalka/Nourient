@@ -16,6 +16,7 @@ uvicorn services.biocontext.main:app --host 0.0.0.0 --port 8005 > biocontext.log
 uvicorn services.alternatives.main:app --host 0.0.0.0 --port 8006 > alternatives.log 2>&1 &
 uvicorn services.basket.main:app --host 0.0.0.0 --port 8007 > basket.log 2>&1 &
 
+uvicorn services.nutrition.main:app --host 0.0.0.0 --port 8008 > nutrition.log 2>&1 &
 cd ../frontend
 echo "Starting frontend..."
 npm run dev > frontend.log 2>&1 &

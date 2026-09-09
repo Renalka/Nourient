@@ -9,7 +9,7 @@ logger = logging.getLogger("ExtractionRouter")
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
-from core.models.product import ExtractedProductData
+from core.models.product import ExtractedProductData, FrontOfPackData, NutritionExtractionData
 from services.extraction.core.ai_engine import GeminiEngine
 
 router = APIRouter()
@@ -109,3 +109,122 @@ async def extract_label_data(file: UploadFile = File(...)):
         logger.error(f"CRITICAL ERROR during extraction: {str(e)}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"AI Extraction failed: {str(e)}")
+
+
+FRONT_PACK_PROMPT = """
+You are a highly analytical food marketing and psychology AI expert.
+Analyze the provided image of the FRONT of a food product's packaging.
+Your goal is to detect the "Health Halo" effect, target audience, and misleading prominent ingredients.
+
+Return strictly in the following JSON format:
+{
+  "health_halo": {
+    "visual_cues": ["list of visual tricks, e.g. rustic fonts, green leaves, earthy tones"],
+    "deception_index": 85,
+    "reasoning": "Explanation of how the visual vibe contrasts with the likely reality of the product"
+  },
+  "target_audience": {
+    "demographic": "e.g. Children, Athletes, Health-conscious adults",
+    "indicators": ["cartoon mascots", "bright primary colors"],
+    "concerns": ["If aimed at kids, flag concerns about synthetic dyes. If aimed at athletes, flag hidden sugars"]
+  },
+  "prominent_ingredients": [
+    {
+      "name": "e.g. Real Strawberries",
+      "implied_quantity": "Showcased as the primary ingredient via massive imagery",
+      "reality_check": "Often makes up < 1% of the formulation. Check the ingredients list to verify."
+    }
+  ],
+  "explicit_claims": ["100% Natural", "No Added Sugar", "Farm Fresh"],
+  "error": null,
+  "error_message": null
+}
+
+CRITICAL INSTRUCTIONS:
+1. 'deception_index' should be 0-100, where 100 means highly deceptive visual marketing (e.g. junk food disguised as health food using green washing).
+2. Only populate 'prominent_ingredients' if the packaging explicitly showcases a premium ingredient (like fruit, honey, oats) using large text or pictures.
+3. Extract any explicit textual marketing claims made on the front into 'explicit_claims' (e.g. "Keto Friendly", "Gluten Free", "Organic").
+4. If the image is not a food product (e.g., it's a car, a face), set `error` to "INVALID_IMAGE" and `error_message` to "This does not appear to be the front of a food package."
+"""
+
+@router.post("/analyze-front", response_model=FrontOfPackData)
+async def analyze_front_pack(file: UploadFile = File(...)):
+    logger.info(f"Incoming POST request to /analyze-front with file: {file.filename}")
+    
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image type (jpeg, png, etc).")
+        
+    try:
+        image_bytes = await file.read()
+        logger.info(f"Sending front image to Gemini... Size: {len(image_bytes)} bytes.")
+        
+        extracted_data = await ai_engine.extract_structured_data(
+            image_bytes=image_bytes,
+            prompt=FRONT_PACK_PROMPT
+        )
+        
+        product_model = FrontOfPackData(**extracted_data)
+        logger.info("Front-of-pack analysis complete.")
+        return product_model
+        
+    except Exception as e:
+        logger.error(f"CRITICAL ERROR during front analysis: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Front Analysis failed: {str(e)}")
+
+
+NUTRITION_PANEL_PROMPT = """
+You are a highly accurate food nutrition extraction AI.
+Analyze the provided image of a food product's NUTRITION FACTS panel.
+Extract the tabular data and serving size explicitly. 
+
+Return strictly in the following JSON format:
+{
+  "stated_serving": {
+    "amount": 30.0,
+    "unit": "g",
+    "description": "e.g. 1/4 cookie or 2 biscuits"
+  },
+  "raw_table": {
+    "calories_per_100g": 0.0,
+    "sugar_per_100g": 0.0,
+    "fiber_per_100g": 0.0,
+    "protein_per_100g": 0.0,
+    "sodium_per_100g": 0.0,
+    "fat_per_100g": 0.0,
+    "sat_fat_per_100g": 0.0
+  },
+  "error": null,
+  "error_message": null
+}
+
+CRITICAL INSTRUCTIONS:
+1. You MUST extract values strictly "per 100g" or "per 100ml" for the raw_table. If the table ONLY shows per serving, calculate the per 100g values mathematically based on the serving size amount.
+2. Ensure the stated serving is what the manufacturer claims is one serving.
+3. If no nutrition table is found, set error to "INVALID_IMAGE" and error_message to "Could not detect a nutrition table."
+"""
+
+@router.post("/analyze-nutrition", response_model=NutritionExtractionData)
+async def analyze_nutrition_panel(file: UploadFile = File(...)):
+    logger.info(f"Incoming POST request to /analyze-nutrition with file: {file.filename}")
+    
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image type (jpeg, png, etc).")
+        
+    try:
+        image_bytes = await file.read()
+        logger.info(f"Sending nutrition image to Gemini... Size: {len(image_bytes)} bytes.")
+        
+        extracted_data = await ai_engine.extract_structured_data(
+            image_bytes=image_bytes,
+            prompt=NUTRITION_PANEL_PROMPT
+        )
+        
+        product_model = NutritionExtractionData(**extracted_data)
+        logger.info("Nutrition panel extraction complete.")
+        return product_model
+        
+    except Exception as e:
+        logger.error(f"CRITICAL ERROR during nutrition extraction: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Nutrition Extraction failed: {str(e)}")
