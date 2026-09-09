@@ -1,8 +1,8 @@
-# Nourient 🌿
+# Nourient
 
-Nourient (formerly *Patchamomma*) is an AI-powered nutritional intelligence platform. It analyzes food packaging, audits health claims, flags hidden ingredients, and generates personalized dietary intelligence.
+Nourient is an AI-powered nutritional intelligence platform. It analyzes food packaging, audits health claims, flags hidden ingredients, and generates personalized dietary intelligence.
 
-## 🏗️ System Architecture
+## System Architecture
 
 Nourient operates on a **microservices architecture** with a Next.js client and a decentralized Python backend.
 
@@ -29,7 +29,7 @@ Written in Python (FastAPI), running concurrently on distinct ports:
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 - Node.js (v18+)
@@ -59,7 +59,7 @@ We use bash scripts to manage the cluster.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 - `/frontend` - Next.js client application
 - `/backend` - Python FastAPI microservices & ML scripts
