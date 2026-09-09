@@ -3,11 +3,8 @@ import re
 with open('backend/services/orchestrator/api/routes.py', 'r') as f:
     content = f.read()
 
-old_logic = """            # 3. Decode Ingredients
-            dec_res = await client.post("http://127.0.0.1:8004/api/v1/detective/decode", json={"ingredients": raw_ingredients}, timeout=30.0)
-            if dec_res.status_code != 200:
-                raise HTTPException(status_code=500, detail="Decoding failed")
-            decoded_ingredients = dec_res.json()
+old_logic = """            # 3. Decode Ingredients (Mocked for Claims Engine)
+            decoded_ingredients = [{"name": ing} for ing in raw_ingredients]
             
             # 4. Verify Claims
             verify_payload = {
@@ -15,8 +12,8 @@ old_logic = """            # 3. Decode Ingredients
                 "ingredients": decoded_ingredients
             }"""
 
-new_logic = """            # 3. Decode Ingredients (Mocked for Claims Engine)
-            decoded_ingredients = [{"name": ing} for ing in raw_ingredients]
+new_logic = """            # 3. Use raw ingredients directly (they are already dicts with 'name')
+            decoded_ingredients = raw_ingredients
             
             # 4. Verify Claims
             verify_payload = {

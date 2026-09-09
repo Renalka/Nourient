@@ -27,6 +27,8 @@ export default function ScannerPage() {
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
+  const [previewUrl2, setPreviewUrl2] = useState<string | null>(null);
   const [step, setStep] = useState<1|2|3|4>(1);
   const [scanMode, setScanMode] = useState<'ingredients' | 'front' | 'nutrition'>('ingredients'); // 1: Capture, 2: Review, 3: Analyze, 4: Results
   const [result, setResult] = useState<any>(null);
@@ -35,8 +37,10 @@ export default function ScannerPage() {
   const [basketMsg, setBasketMsg] = useState("");
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef2 = useRef<HTMLInputElement>(null);
   
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [activeClaimsTab, setActiveClaimsTab] = useState<'front' | 'back'>('front');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -131,10 +135,26 @@ export default function ScannerPage() {
         canvas.toBlob((blob) => {
           if (blob) {
             const capturedFile = new File([blob], "capture.jpg", { type: "image/jpeg" });
-            setFile(capturedFile);
-            setPreviewUrl(URL.createObjectURL(capturedFile));
-            stopCamera();
-            setStep(2);
+            if (scanMode === 'claims') {
+              if (activeClaimsTab === 'back') {
+                setFile2(capturedFile);
+                setPreviewUrl2(URL.createObjectURL(capturedFile));
+                stopCamera();
+                if (file) setStep(2);
+                else setActiveClaimsTab('front');
+              } else {
+                setFile(capturedFile);
+                setPreviewUrl(URL.createObjectURL(capturedFile));
+                stopCamera();
+                if (file2) setStep(2);
+                else setActiveClaimsTab('back'); // Auto-advance tab!
+              }
+            } else {
+              setFile(capturedFile);
+              setPreviewUrl(URL.createObjectURL(capturedFile));
+              stopCamera();
+              setStep(2);
+            }
           }
         }, 'image/jpeg', 0.7);
       }
@@ -186,30 +206,62 @@ export default function ScannerPage() {
       const compressed = await compressImage(selectedFile);
       setFile(compressed);
       setPreviewUrl(URL.createObjectURL(compressed));
-      stopCamera();
-      setStep(2); // Move to review
+      if (scanMode === 'claims') {
+        if (file2) setStep(2);
+        else setActiveClaimsTab('back');
+      } else {
+        setStep(2);
+      }
+    }
+  };
+
+  const handleFile2Change = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      const compressed = await compressImage(selectedFile);
+      setFile2(compressed);
+      setPreviewUrl2(URL.createObjectURL(compressed));
+      if (scanMode === 'claims') {
+        if (file) setStep(2);
+        else setActiveClaimsTab('front');
+      } else {
+        setStep(2);
+      }
     }
   };
 
   const handleRetake = () => {
     setFile(null);
     setPreviewUrl(null);
+    setFile2(null);
+    setPreviewUrl2(null);
     setStep(1);
     setError(null);
   };
 
   const processImage = async (isEnhanced = false) => {
     if (!file) return;
+    if (scanMode === 'claims' && !file2) {
+      setError("Please capture both the front and back of the pack to verify claims.");
+      return;
+    }
     setStep(3); // Analyzing
     setError(null);
 
     const formData = new FormData();
-    formData.append('file', file);
+    if (scanMode === 'claims') {
+      formData.append('front_file', file);
+      if (file2) formData.append('back_file', file2);
+    } else {
+      formData.append('file', file);
+    }
 
     try {
       const token = await getToken();
 
-      const endpoint = scanMode === 'front'
+      const endpoint = scanMode === 'claims'
+        ? 'http://localhost:8003/api/v1/orchestrate/claims-scanner'
+        : scanMode === 'front'
         ? 'http://localhost:8003/api/v1/orchestrate/front-scanner'
         : scanMode === 'nutrition'
             ? 'http://localhost:8003/api/v1/orchestrate/nutrition-scanner'
@@ -410,6 +462,20 @@ export default function ScannerPage() {
                           </div>
                         </div>
                       </button>
+                      <button 
+                        onClick={() => setScanMode('claims')}
+                        className={`flex items-center justify-between p-4 rounded-xl border transition-all ${scanMode === 'claims' ? 'border-brand bg-brand-light/30 ring-1 ring-brand' : 'border-gray-200 bg-white hover:border-brand/50'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${scanMode === 'claims' ? 'bg-brand text-white' : 'bg-gray-100 text-gray-400'}`}>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                          </div>
+                          <div className="text-left">
+                            <h3 className={`text-sm font-bold ${scanMode === 'claims' ? 'text-brand-dark' : 'text-gray-700'}`}>Claims Verifier</h3>
+                            <p className="text-xs text-gray-500">Cross-reference marketing with ingredients</p>
+                          </div>
+                        </div>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -423,59 +489,95 @@ export default function ScannerPage() {
                      onChange={handleFileChange}
                      className="hidden"
                    />
+                   <input 
+                     type="file" 
+                     accept="image/*" 
+                     ref={uploadInputRef2}
+                     onChange={handleFile2Change}
+                     className="hidden"
+                   />
                    
                    <div className="flex flex-col gap-8 w-full items-center">
-                     {/* Main Frame */}
-                     <div 
-                       className="relative w-full aspect-[3/4] max-w-sm rounded-2xl border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden cursor-pointer hover:bg-gray-100 transition-colors"
-                       onClick={isCameraActive ? capturePhoto : (step === 1 ? startCamera : undefined)}
-                     >
-                        <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${isCameraActive ? 'block' : 'hidden'}`} />
-                        <canvas ref={canvasRef} className="hidden" />
-                        
-                        {!isCameraActive && (
-                          previewUrl ? (
-                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="text-center">
-                              <div className="w-16 h-16 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
-                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                     <div className="flex flex-col items-center w-full">
+                       {/* Single Main Frame */}
+                       <div 
+                         className={`relative w-full aspect-[3/4] max-w-sm rounded-2xl border-2 overflow-hidden cursor-pointer transition-colors flex items-center justify-center ${isCameraActive ? 'border-brand bg-gray-50 shadow-lg' : 'border-dashed border-gray-300 bg-gray-50 hover:bg-gray-100'}`}
+                         onClick={isCameraActive ? capturePhoto : (step === 1 ? startCamera : undefined)}
+                       >
+                          {scanMode === 'claims' && isCameraActive && (
+                            <div className="absolute top-4 z-10 bg-black/60 text-white px-4 py-1.5 rounded-full text-xs font-bold backdrop-blur-md">
+                              {activeClaimsTab === 'back' ? "Capturing Back (Ingredients)" : "Capturing Front of Pack"}
+                            </div>
+                          )}
+                          <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover ${isCameraActive ? 'block' : 'hidden'}`} />
+                          <canvas ref={canvasRef} className="hidden" />
+                          
+                          {!isCameraActive && (
+                            (scanMode === 'claims' && activeClaimsTab === 'back' ? previewUrl2 : previewUrl) ? (
+                              <img src={scanMode === 'claims' && activeClaimsTab === 'back' ? previewUrl2! : previewUrl!} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="text-center p-6">
+                                <div className="w-16 h-16 rounded-full bg-white shadow-sm border border-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-400">
+                                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+                                </div>
+                                <h3 className="text-sm font-bold text-gray-900 mb-1">
+                                  {scanMode === 'claims' ? (activeClaimsTab === 'back' ? "Ingredients List" : "Front of Pack") : 
+                                   scanMode === 'ingredients' ? "Capture Ingredients List" :
+                                   scanMode === 'nutrition' ? "Capture Nutrition Facts" :
+                                   scanMode === 'front' ? "Capture Front of Pack" :
+                                   "Capture Product Label"}
+                                </h3>
+                                <p className="text-xs text-gray-500">Tap to activate camera</p>
                               </div>
-                              <p className="text-sm font-medium text-gray-500">Tap to activate camera</p>
-                            </div>
-                          )
-                        )}
-                        
-                        {/* Corner markers */}
-                        <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-brand"></div>
-                        <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-brand"></div>
-                        <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-brand"></div>
-                        <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-brand"></div>
-                     </div>
+                            )
+                          )}
+                          
+                          {/* Corner markers */}
+                          <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-brand"></div>
+                          <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-brand"></div>
+                          <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-brand"></div>
+                          <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-brand"></div>
+                       </div>
 
-                     {/* Thumbnails Row */}
-                     <div className="flex flex-row gap-6 justify-center">
-                        {["Front", "Ingredients", "Nutrition"].map((label, i) => (
-                          <div key={i} className="space-y-2 text-center">
-                            <div className={`w-16 h-16 mx-auto rounded-xl border-2 ${i===0 && previewUrl ? 'border-brand' : 'border-gray-200 border-dashed'} bg-white overflow-hidden flex items-center justify-center text-[10px] text-gray-300 transition-colors`}>
-                              {i===0 && previewUrl ? <img src={previewUrl} className="w-full h-full object-cover"/> : 'Empty'}
+                       {/* Thumbnails Row */}
+                       <div className="flex flex-row gap-6 justify-center mt-8">
+                          {scanMode === 'claims' ? (
+                            <>
+                              <div className="space-y-2 text-center cursor-pointer" onClick={() => setActiveClaimsTab('front')}>
+                                <div className={`w-16 h-16 mx-auto rounded-xl border-2 ${activeClaimsTab === 'front' ? 'border-brand' : (previewUrl ? 'border-brand border-solid' : 'border-gray-200 border-dashed')} bg-white overflow-hidden flex items-center justify-center text-[10px] text-gray-300 transition-colors relative`}>
+                                  {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" alt="thumb"/> : 'Empty'}
+                                  {previewUrl && activeClaimsTab !== 'front' && <div className="absolute inset-0 bg-black/20"></div>}
+                                </div>
+                                <span className={`text-[11px] font-semibold ${activeClaimsTab === 'front' ? 'text-brand' : 'text-gray-500'}`}>Front Pack</span>
+                              </div>
+                              <div className="space-y-2 text-center cursor-pointer" onClick={() => setActiveClaimsTab('back')}>
+                                <div className={`w-16 h-16 mx-auto rounded-xl border-2 ${activeClaimsTab === 'back' ? 'border-brand' : (previewUrl2 ? 'border-brand border-solid' : 'border-gray-200 border-dashed')} bg-white overflow-hidden flex items-center justify-center text-[10px] text-gray-300 transition-colors relative`}>
+                                  {previewUrl2 ? <img src={previewUrl2} className="w-full h-full object-cover" alt="thumb"/> : 'Empty'}
+                                  {previewUrl2 && activeClaimsTab !== 'back' && <div className="absolute inset-0 bg-black/20"></div>}
+                                </div>
+                                <span className={`text-[11px] font-semibold ${activeClaimsTab === 'back' ? 'text-brand' : 'text-gray-500'}`}>Ingredients</span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="space-y-2 text-center">
+                              <div className={`w-16 h-16 mx-auto rounded-xl border-2 ${previewUrl ? 'border-brand border-solid' : 'border-gray-200 border-dashed'} bg-white overflow-hidden flex items-center justify-center text-[10px] text-gray-300 transition-colors`}>
+                                {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover" alt="thumb"/> : 'Empty'}
+                              </div>
+                              <span className="text-[11px] font-semibold text-gray-500">
+                                {scanMode === 'ingredients' ? 'Ingredients Label' : 
+                                 scanMode === 'nutrition' ? 'Nutrition Facts' : 
+                                 scanMode === 'front' ? 'Front of Pack' : 'Captured Image'}
+                              </span>
                             </div>
-                            <span className="text-[11px] font-semibold text-gray-500">{label}</span>
-                          </div>
-                        ))}
-                        <div className="space-y-2 text-center cursor-pointer">
-                          <div className="w-16 h-16 mx-auto rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                          </div>
-                          <span className="text-[11px] font-semibold text-gray-500">Add claims</span>
-                        </div>
+                          )}
+                       </div>
                      </div>
                    </div>
 
                    {/* Bottom Controls */}
                    <div className="flex justify-center items-center gap-4 mt-4 pt-4 border-t border-gray-100 w-full flex-wrap">
-                     <button onClick={step === 1 ? (isCameraActive ? stopCamera : startCamera) : handleRetake} className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-28 text-center">
-                       {step === 1 ? (isCameraActive ? 'Cancel' : 'Camera') : 'Retake'}
+                     <button onClick={step === 1 ? (isCameraActive ? stopCamera : handleRetake) : handleRetake} className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm w-28 text-center">
+                       {step === 1 ? (isCameraActive ? 'Cancel' : 'Retake') : 'Retake'}
                      </button>
                      
                      <div 
@@ -485,14 +587,14 @@ export default function ScannerPage() {
                        <div className={`w-12 h-12 rounded-full shadow-md ${isCameraActive ? 'bg-red-500' : 'bg-brand'}`}></div>
                      </div>
                      
-                     <button onClick={step === 1 ? () => uploadInputRef.current?.click() : () => processImage(false)} className={`px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm ${step === 2 ? 'w-32 bg-gray-100' : 'w-28'}`}>
-                       {step === 1 ? 'Upload' : 'Analyze'}
+                     <button onClick={step === 1 ? () => (scanMode === 'claims' && activeClaimsTab === 'back' ? uploadInputRef2.current?.click() : uploadInputRef.current?.click()) : () => processImage(false)} className={`px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm ${step === 2 ? 'w-32 bg-gray-100' : 'w-28'}`}>
+                       {step === 1 ? 'Upload' : (addingToBasket ? 'Loading...' : (basketMsg ? basketMsg : 'Analyze'))}
                      </button>
 
                      {step === 2 && (
                        <button onClick={() => processImage(true)} className="px-4 py-2 bg-brand border border-brand rounded-full text-xs font-bold text-white hover:bg-brand-dark transition-colors shadow-sm w-32 flex items-center justify-center gap-2">
                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                         Enhanced
+                         Deep Scan
                        </button>
                      )}
                    </div>
@@ -671,9 +773,160 @@ export default function ScannerPage() {
                          )}
                        </div>
                      </div>
+
+
                    </div>
                  )}
 
+
+                 {scanMode === 'claims' && result && (
+                   <div className="space-y-8">
+                     {/* Hero Header */}
+                     <div className="relative w-full h-48 rounded-3xl overflow-hidden mb-8 shadow-sm group">
+                       <img src="/assets/bg/scan-results.png" className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" alt="Claims verification header" />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                       <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
+                         <div className="text-white">
+                           <h1 className="text-3xl font-serif mb-1 drop-shadow-md">Claims Verifier</h1>
+                           <p className="text-sm text-white/90 font-medium drop-shadow-sm">Contradictions • Loopholes • Buzzwords</p>
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Contradictions */}
+                     {result.verification?.contradictions?.length > 0 && (
+                       <div className="bg-white p-6 rounded-3xl border border-red-100 shadow-sm relative overflow-hidden">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-red-500 mb-4 flex items-center gap-2">
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                           Direct Contradictions
+                         </h2>
+                         <div className="space-y-4">
+                           {result.verification.contradictions.map((c: any, i: number) => (
+                             <div key={i} className="p-4 rounded-xl border border-red-200 bg-red-50">
+                               <p className="text-lg font-bold text-red-900 mb-1">&quot;{c.claim}&quot;</p>
+                               <p className="text-sm text-red-700 font-medium mb-3">But contains: <span className="font-black">{c.contradicting_ingredient}</span></p>
+                               <p className="text-xs text-red-600 bg-white px-3 py-2 rounded-lg border border-red-100">{c.explanation}</p>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Loopholes */}
+                     {result.verification?.loopholes?.length > 0 && (
+                       <div className="bg-white p-6 rounded-3xl border border-yellow-100 shadow-sm relative overflow-hidden">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-yellow-600 mb-4 flex items-center gap-2">
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                           Regulatory Loopholes
+                         </h2>
+                         <div className="space-y-4">
+                           {result.verification.loopholes.map((l: any, i: number) => (
+                             <div key={i} className="p-4 rounded-xl border border-yellow-200 bg-yellow-50">
+                               <p className="text-lg font-bold text-yellow-900 mb-1">&quot;{l.claim}&quot;</p>
+                               <p className="text-sm text-yellow-800 font-medium mb-3">Means: <span className="font-black">{l.true_meaning}</span></p>
+                               <p className="text-xs text-yellow-700 bg-white px-3 py-2 rounded-lg border border-yellow-100">{l.reality_check}</p>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* Buzzwords */}
+                     {result.verification?.buzzwords?.length > 0 && (
+                       <div className="bg-white p-6 rounded-3xl border border-brand/20 shadow-sm relative overflow-hidden">
+                         <h2 className="text-xs font-bold uppercase tracking-widest text-brand mb-4 flex items-center gap-2">
+                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>
+                           Marketing Fluff
+                         </h2>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {result.verification.buzzwords.map((b: any, i: number) => (
+                             <div key={i} className="p-4 rounded-xl border border-brand/10 bg-brand-light/30">
+                               <div className="flex justify-between items-center mb-2">
+                                 <p className="text-md font-bold text-brand-dark">&quot;{b.word}&quot;</p>
+                                 <span className="text-[10px] font-bold uppercase tracking-widest bg-brand text-white px-2 py-0.5 rounded-full">Fluff: {b.fluff_score}%</span>
+                               </div>
+                               <p className="text-xs text-gray-700 leading-relaxed">{b.explanation}</p>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     )}
+
+                     {/* All Clear state */}
+                     {result.verification?.contradictions?.length === 0 && result.verification?.loopholes?.length === 0 && result.verification?.buzzwords?.length === 0 && (
+                       <div className="bg-white p-8 rounded-3xl border border-green-100 shadow-sm text-center">
+                         <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                         </div>
+                         <h2 className="text-xl font-bold text-green-800 mb-2">Clean Marketing</h2>
+                         <p className="text-sm text-gray-600">No major contradictions, loopholes, or fluff detected between the front claims and the ingredients list.</p>
+                       </div>
+                     )}
+
+                     {/* Detailed Claims Audit */}
+                     <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm mt-8">
+                       <h2 className="text-xl font-serif text-gray-900 mb-6 flex items-center gap-2">
+                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                         Detailed Claims Audit
+                       </h2>
+                       <div className="space-y-4">
+                         {result.explicit_claims?.length > 0 ? result.explicit_claims.map((claim: string, i: number) => {
+                           const contradiction = result.verification?.contradictions?.find((c: any) => c.claim === claim);
+                           const loophole = result.verification?.loopholes?.find((l: any) => l.claim === claim);
+                           const buzzword = result.verification?.buzzwords?.find((b: any) => b.word === claim);
+
+                           let status = 'CLEAN';
+                           if (contradiction) status = 'CONTRADICTION';
+                           else if (loophole) status = 'LOOPHOLE';
+                           else if (buzzword) status = 'BUZZWORD';
+
+                           return (
+                             <div key={i} className={`p-5 rounded-2xl border ${status === 'CLEAN' ? 'border-green-100 bg-green-50' : status === 'CONTRADICTION' ? 'border-red-100 bg-red-50' : status === 'LOOPHOLE' ? 'border-yellow-100 bg-yellow-50' : 'border-brand/20 bg-brand-light/30'}`}>
+                               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-3">
+                                 <p className="text-lg font-bold text-gray-900">&quot;{claim}&quot;</p>
+                                 <div>
+                                   {status === 'CLEAN' && <span className="text-[10px] font-bold uppercase tracking-widest bg-green-200 text-green-800 px-3 py-1 rounded-full">No Flags Detected</span>}
+                                   {status === 'CONTRADICTION' && <span className="text-[10px] font-bold uppercase tracking-widest bg-red-200 text-red-800 px-3 py-1 rounded-full">Direct Contradiction</span>}
+                                   {status === 'LOOPHOLE' && <span className="text-[10px] font-bold uppercase tracking-widest bg-yellow-200 text-yellow-800 px-3 py-1 rounded-full">Regulatory Loophole</span>}
+                                   {status === 'BUZZWORD' && <span className="text-[10px] font-bold uppercase tracking-widest bg-brand text-white px-3 py-1 rounded-full">Marketing Fluff</span>}
+                                 </div>
+                               </div>
+                               
+                               <div className="text-sm">
+                                 {status === 'CLEAN' && <p className="text-green-700">This claim appears to be standard and does not trigger our deception database.</p>}
+                                 
+                                 {status === 'CONTRADICTION' && (
+                                   <>
+                                     <p className="text-red-700 font-medium mb-2">But contains: <span className="font-black">{contradiction.contradicting_ingredient}</span></p>
+                                     <p className="text-red-600 bg-white px-4 py-3 rounded-xl border border-red-100 leading-relaxed">{contradiction.explanation}</p>
+                                   </>
+                                 )}
+                                 
+                                 {status === 'LOOPHOLE' && (
+                                   <>
+                                     <p className="text-yellow-800 font-medium mb-2">Means: <span className="font-black">{loophole.true_meaning}</span></p>
+                                     <p className="text-yellow-700 bg-white px-4 py-3 rounded-xl border border-yellow-100 leading-relaxed">{loophole.reality_check}</p>
+                                   </>
+                                 )}
+                                 
+                                 {status === 'BUZZWORD' && (
+                                   <p className="text-gray-700 bg-white px-4 py-3 rounded-xl border border-brand/10 leading-relaxed">{buzzword.explanation}</p>
+                                 )}
+                               </div>
+                             </div>
+                           );
+                         }) : (
+                           <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-center">
+                             <p className="text-gray-500 font-medium">No explicit marketing claims detected on the front of the packaging.</p>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+
+
+
+                   </div>
+                 )}
 
                  {scanMode === 'front' && (
                    <div className="space-y-8">
@@ -810,6 +1063,8 @@ export default function ScannerPage() {
                          )}
                        </div>
                      </div>
+
+
                    </div>
                  )}
 
@@ -949,6 +1204,8 @@ export default function ScannerPage() {
                      {/*<p className={`text-xs max-w-md hidden md:block ${result.score.overall_recommendation.includes('LIMIT') ? 'text-red-600/80' : 'text-brand-dark/80'}`}>
                        {result.score.reasoning}
                      </p>*/}
+
+
                    </div>
                  )}
 
@@ -1040,6 +1297,8 @@ export default function ScannerPage() {
                          </div>
                        </div>
                      )}
+
+
                    </div>
                  )}
                  
