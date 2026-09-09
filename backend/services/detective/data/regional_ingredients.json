@@ -1,0 +1,76 @@
+{
+  "regional_terms": [
+    {
+      "term": "Maida",
+      "english_name": "Refined Wheat Flour",
+      "category": "Standard Ingredient",
+      "source": "Synthetic / Processed",
+      "risk_level": "Moderate Risk",
+      "explanation": "A highly refined wheat flour stripped of fiber and nutrients, leading to a high glycemic index."
+    },
+    {
+      "term": "Dalda",
+      "english_name": "Hydrogenated Vegetable Oil (Vanaspati)",
+      "category": "Standard Ingredient",
+      "source": "Synthetic / Processed",
+      "risk_level": "High Risk",
+      "explanation": "Contains harmful trans fats linked to cardiovascular diseases."
+    },
+    {
+      "term": "Suji",
+      "english_name": "Semolina",
+      "category": "Standard Ingredient",
+      "source": "Natural Derived",
+      "risk_level": "Safe",
+      "explanation": "Coarse flour made from durum wheat. Safe, but high in carbohydrates."
+    },
+    {
+      "term": "Rava",
+      "english_name": "Semolina",
+      "category": "Standard Ingredient",
+      "source": "Natural Derived",
+      "risk_level": "Safe",
+      "explanation": "Coarse flour made from durum wheat. Safe, but high in carbohydrates."
+    },
+    {
+      "term": "Atta",
+      "english_name": "Whole Wheat Flour",
+      "category": "Standard Ingredient",
+      "source": "Natural",
+      "risk_level": "Safe",
+      "explanation": "Unrefined wheat flour retaining bran and germ, high in dietary fiber."
+    },
+    {
+      "term": "Besan",
+      "english_name": "Gram Flour / Chickpea Flour",
+      "category": "Standard Ingredient",
+      "source": "Natural",
+      "risk_level": "Safe",
+      "explanation": "Gluten-free flour high in protein and fiber."
+    },
+    {
+      "term": "Palmolein",
+      "english_name": "Refined Palm Oil",
+      "category": "Standard Ingredient",
+      "source": "Synthetic / Processed",
+      "risk_level": "Moderate Risk",
+      "explanation": "A highly refined, cheap edible oil high in saturated fats. Heavily overused in Indian packaged snacks."
+    },
+    {
+      "term": "Khand",
+      "english_name": "Unrefined Sugar (Khandsari)",
+      "category": "Standard Ingredient",
+      "source": "Natural Derived",
+      "risk_level": "Moderate Risk",
+      "explanation": "A less refined sugar, but still acts identically to added sugar in the bloodstream."
+    },
+    {
+      "term": "Sendha Namak",
+      "english_name": "Rock Salt",
+      "category": "Standard Ingredient",
+      "source": "Natural",
+      "risk_level": "Safe",
+      "explanation": "Unrefined salt rich in trace minerals, though sodium intake should still be monitored."
+    }
+  ]
+}

@@ -1,21 +1,24 @@
 import os
-import chromadb
+from pinecone import Pinecone
 from chromadb.utils import embedding_functions
 from typing import List, Dict, Any
 from .ins_decoder import IngredientDecoder
 
 class EnhancedIngredientDecoder:
     def __init__(self):
-        base_dir = os.path.dirname(__file__)
-        self.db_path = os.path.join(base_dir, '..', '..', '..', 'data', 'chroma_db')
-        
         # Fast standard dictionary lookup
         self.standard_decoder = IngredientDecoder()
         
-        # Semantic vector fallback
-        self.client = chromadb.PersistentClient(path=self.db_path)
+        # Read-only connection to Pinecone
+        self.pc_api_key = os.environ.get("PINECONE_API_KEY")
+        if self.pc_api_key:
+            self.pc = Pinecone(api_key=self.pc_api_key)
+            self.index = self.pc.Index("patchamomma-ingredients")
+        else:
+            self.index = None
+            print("CRITICAL WARNING: PINECONE_API_KEY not set. Enhanced Ingredient Decoder will fail.")
+            
         self.emb_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name="all-MiniLM-L6-v2")
-        self.collection = self.client.get_collection("ingredients", embedding_function=self.emb_fn)
 
     def decode_ingredients(self, ingredients: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         # 1. Run the highly accurate, regex-aware standard decoder first!
@@ -32,6 +35,11 @@ class EnhancedIngredientDecoder:
                 continue
                 
             # If it failed, try the AI Vector DB fallback
+            if not self.index:
+                item["vector_match"] = False
+                final_results.append(item)
+                continue
+                
             original_text = item.get("original_text", "")
             code_raw = item.get("code", "")
             
@@ -39,16 +47,26 @@ class EnhancedIngredientDecoder:
             if code_raw:
                 query_text = f"{original_text} {code_raw}"
                 
-            results = self.collection.query(
-                query_texts=[query_text],
-                n_results=1
+            query_emb = self.emb_fn([query_text])[0]
+            if hasattr(query_emb, 'tolist'):
+                query_emb = query_emb.tolist()
+                
+            res = self.index.query(
+                vector=query_emb,
+                top_k=1,
+                include_metadata=True
             )
             
             best_match = None
-            if results and results["distances"] and len(results["distances"][0]) > 0:
-                distance = results["distances"][0][0]
-                if distance < 0.25:  # Strict threshold
-                    best_match = results["metadatas"][0][0]
+            distance = 0.0
+            if res.matches and len(res.matches) > 0:
+                # Pinecone returns similarity score. Higher is better (up to 1.0)
+                # We used < 0.25 in Chroma (L2 or Cosine distance), so > 0.75 in Pinecone score
+                score = res.matches[0].score
+                if score > 0.75:
+                    best_match = res.matches[0].metadata
+                    # convert similarity score to a "distance" for UI backwards compatibility
+                    distance = 1.0 - score
 
             if best_match:
                 # Patch the standard result with the vector match!

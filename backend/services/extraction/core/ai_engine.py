@@ -13,14 +13,14 @@ class GeminiEngine(IAIEngine):
     def __init__(self):
         genai.configure(api_key=settings.GEMINI_API_KEY)
         # 2026 Compatible Model: gemini-2.5-flash (or gemini-flash-latest)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-3.5-flash')
         
     async def extract_structured_data(self, image_bytes: bytes, prompt: str, response_schema: Any = None) -> Dict[str, Any]:
         """
         Extracts structured JSON from an image using Gemini Vision.
         """
         import asyncio
-        from google.api_core.exceptions import DeadlineExceeded
+        from google.api_core.exceptions import DeadlineExceeded, ResourceExhausted
 
         image_parts = [
             {
@@ -46,9 +46,15 @@ class GeminiEngine(IAIEngine):
                 break # Success! Break the loop
             except DeadlineExceeded as e:
                 if attempt == max_retries - 1:
-                    raise e # Exhausted retries
-                await asyncio.sleep(2) # Backoff before retrying
+                    raise e
+                await asyncio.sleep(2)
                 print(f"Vision AI Timeout (Attempt {attempt + 1}). Retrying...")
+            except ResourceExhausted as e:
+                if attempt == max_retries - 1:
+                    raise e
+                print(f"Gemini Free Tier Rate Limit Hit (Attempt {attempt + 1}). Pausing for 40 seconds...")
+                await asyncio.sleep(40) # Pause safely beyond the 35 second API penalty window
+                print("Resuming extraction...")
         
         text = response.text
         # Safety net: clean markdown code blocks if the AI returns them despite mime_type

@@ -1,30 +1,7 @@
-import re
-
 with open('backend/services/orchestrator/api/routes.py', 'r') as f:
     content = f.read()
 
-old_logic = """            # 3. Decode Ingredients
-            dec_res = await client.post("http://127.0.0.1:8004/api/v1/detective/decode", json={"ingredients": raw_ingredients}, timeout=30.0)
-            if dec_res.status_code != 200:
-                raise HTTPException(status_code=500, detail="Decoding failed")
-            decoded_ingredients = dec_res.json()
-            
-            # 4. Verify Claims
-            verify_payload = {
-                "explicit_claims": explicit_claims,
-                "ingredients": decoded_ingredients
-            }"""
-
-new_logic = """            # 3. Decode Ingredients (Mocked for Claims Engine)
-            decoded_ingredients = [{"name": ing} for ing in raw_ingredients]
-            
-            # 4. Verify Claims
-            verify_payload = {
-                "explicit_claims": explicit_claims,
-                "ingredients": decoded_ingredients
-            }"""
-
-content = content.replace(old_logic, new_logic)
+content = content.replace("timeout=60.0", "timeout=120.0")
 
 with open('backend/services/orchestrator/api/routes.py', 'w') as f:
     f.write(content)

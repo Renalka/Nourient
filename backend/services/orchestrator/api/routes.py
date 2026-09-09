@@ -35,7 +35,7 @@ async def process_scanner(
         files = {"file": (file.filename, file_bytes, file.content_type)}
         
         async with httpx.AsyncClient() as client:
-            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=60.0)
+            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=120.0)
             if extract_res.status_code != 200:
                 err_detail = "Extraction failed"
                 try:
@@ -97,7 +97,7 @@ async def process_enhanced_scanner(
         files = {"file": (file.filename, file_bytes, file.content_type)}
         
         async with httpx.AsyncClient() as client:
-            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=60.0)
+            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=120.0)
             if extract_res.status_code != 200:
                 err_detail = "Extraction failed"
                 try: err_detail = extract_res.json().get("detail", err_detail)
@@ -157,7 +157,7 @@ async def process_auditor(
         files = {"file": (file.filename, file_bytes, file.content_type)}
         
         async with httpx.AsyncClient() as client:
-            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=60.0)
+            extract_res = await client.post(EXTRACTION_URL, files=files, timeout=120.0)
             if extract_res.status_code != 200:
                 err_detail = "Extraction failed"
                 try:
@@ -189,7 +189,7 @@ async def process_front_scanner(file: UploadFile = File(...)):
         files = {"file": (file.filename, file_bytes, file.content_type)}
         
         async with httpx.AsyncClient() as client:
-            extract_res = await client.post("http://127.0.0.1:8000/api/v1/vision/analyze-front", files=files, timeout=60.0)
+            extract_res = await client.post("http://127.0.0.1:8000/api/v1/vision/analyze-front", files=files, timeout=120.0)
             if extract_res.status_code != 200:
                 err_detail = "Front Extraction failed"
                 try: err_detail = extract_res.json().get("detail", err_detail)
@@ -209,7 +209,7 @@ async def process_nutrition_scanner(file: UploadFile = File(...)):
         
         async with httpx.AsyncClient() as client:
             # 1. Vision extraction of the nutrition table
-            extract_res = await client.post("http://127.0.0.1:8000/api/v1/vision/analyze-nutrition", files=files, timeout=60.0)
+            extract_res = await client.post("http://127.0.0.1:8000/api/v1/vision/analyze-nutrition", files=files, timeout=120.0)
             if extract_res.status_code != 200:
                 err_detail = "Nutrition Extraction failed"
                 try: err_detail = extract_res.json().get("detail", err_detail)
@@ -240,7 +240,7 @@ async def process_claims_scanner(front_file: UploadFile = File(...), back_file: 
         async with httpx.AsyncClient() as client:
             # 1. Extract Front Claims
             f_files = {"file": (front_file.filename, front_bytes, front_file.content_type)}
-            front_res = await client.post("http://127.0.0.1:8000/api/v1/vision/analyze-front", files=f_files, timeout=60.0)
+            front_res = await client.post("http://127.0.0.1:8000/api/v1/vision/analyze-front", files=f_files, timeout=120.0)
             if front_res.status_code != 200:
                 raise HTTPException(status_code=500, detail="Front extraction failed")
             front_data = front_res.json()
@@ -248,7 +248,7 @@ async def process_claims_scanner(front_file: UploadFile = File(...), back_file: 
             
             # 2. Extract Back Ingredients
             b_files = {"file": (back_file.filename, back_bytes, back_file.content_type)}
-            back_res = await client.post("http://127.0.0.1:8000/api/v1/vision/extract", files=b_files, timeout=60.0)
+            back_res = await client.post("http://127.0.0.1:8000/api/v1/vision/extract", files=b_files, timeout=120.0)
             if back_res.status_code != 200:
                 raise HTTPException(status_code=500, detail="Back extraction failed")
             back_data = back_res.json()
