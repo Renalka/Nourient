@@ -16,7 +16,7 @@ class AuditorAgent:
     def __init__(self):
         genai.configure(api_key=settings.GEMINI_API_KEY)
         # Downgrading to the Flash model to bypass Free Tier Pro limits (limit: 0)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-3.5-flash')
         logger.info("Initialized AuditorAgent with gemini-2.5-flash (Quota Workaround)")
 
     async def audit_product(self, product: ExtractedProductData) -> TrueLabelAuditResult:
