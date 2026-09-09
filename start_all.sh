@@ -6,6 +6,10 @@ lsof -ti :8000,8001,8002,8003,8004,8005,8006,8007,3000 | xargs kill -9 2>/dev/nu
 cd backend
 source venv/bin/activate
 
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+fi
+
 echo "Starting microservices..."
 uvicorn services.extraction.main:app --host 0.0.0.0 --port 8000 > extraction.log 2>&1 &
 uvicorn services.scoring.main:app --host 0.0.0.0 --port 8001 > scoring.log 2>&1 &
