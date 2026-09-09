@@ -3,8 +3,6 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
 import SidebarLayout from '@/components/SidebarLayout';
-import AvatarMenu from '@/components/AvatarMenu';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
@@ -14,6 +12,7 @@ export default function DashboardPage() {
   const [healthProfile, setHealthProfile] = React.useState("GENERAL");
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [savingProfile, setSavingProfile] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -27,21 +26,20 @@ export default function DashboardPage() {
       const scanKey = `recentScans_${user.uid}`;
       const historyStr = localStorage.getItem(scanKey);
       if (historyStr) {
-        setRecentScans(JSON.parse(historyStr));
-      } else {
-        setRecentScans([]);
+        try {
+          const parsed = JSON.parse(historyStr);
+          setRecentScans(Array.isArray(parsed) ? parsed.filter(Boolean) : []);
+        } catch(e) { setRecentScans([]); }
       }
+      else setRecentScans([]);
       
       const profileKey = `healthProfile_${user.uid}`;
       const profileStr = localStorage.getItem(profileKey);
-      if (profileStr) {
-        setHealthProfile(profileStr);
-      } else {
-        setHealthProfile("GENERAL");
-      }
-    } catch (e) {
-      console.error(e);
-    }
+      if (profileStr) setHealthProfile(profileStr);
+      else setHealthProfile("GENERAL");
+    } catch (e) { console.error(e); }
+    const t = setTimeout(() => setMounted(true), 80);
+    return () => clearTimeout(t);
   }, [user, loading]);
 
   const handleSaveProfile = async (profile: string) => {
@@ -49,9 +47,7 @@ export default function DashboardPage() {
     try {
       setHealthProfile(profile);
       if (user) {
-        const profileKey = `healthProfile_${user.uid}`;
-        localStorage.setItem(profileKey, profile);
-        
+        localStorage.setItem(`healthProfile_${user.uid}`, profile);
         const token = await user.getIdToken();
         await fetch('http://localhost:8005/api/v1/biocontext/update_profile', {
            method: 'POST',
@@ -59,18 +55,34 @@ export default function DashboardPage() {
            body: JSON.stringify({ user_id: user.uid, health_profile: profile })
         });
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     setSavingProfile(false);
     setIsEditingProfile(false);
   };
+
+  const getGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 17) return "Good afternoon";
+    return "Good evening";
+  };
+
+  const avgScore = recentScans.length > 0
+    ? Math.round(recentScans.reduce((a, s) => a + (s?.score || 0), 0) / recentScans.length) : 72;
+  const avgProcessing = recentScans.length > 0
+    ? Math.round(recentScans.reduce((a, s) => a + (s?.processing_score || 0), 0) / recentScans.length) : 45;
+  const cleanCount = recentScans.filter(s => (s?.score || 0) >= 70).length;
+  const scoreOffset = 283 - (283 * avgScore) / 100;
+
+  const goalLabel = healthProfile === 'DIABETIC' ? 'Low Sugar · Glycemic Control'
+    : healthProfile === 'HYPERTENSION' ? 'Low Sodium · Heart Health'
+    : 'Balanced Diet · Optimal Health';
 
   if (loading || !user) return null;
 
   return (
     <SidebarLayout
-      pageTitle={`Good morning, ${displayName}`}
+      pageTitle={`${getGreeting()}, ${displayName}`}
       pageSubtitle="Let's make better food choices today."
       headerContent={
         <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -79,234 +91,328 @@ export default function DashboardPage() {
         </div>
       }
     >
-      {loading ? (
-        <div className="space-y-8 animate-pulse">
-           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-             <div className="lg:col-span-2 bg-gray-100 rounded-2xl h-80"></div>
-             <div className="bg-gray-100 rounded-2xl h-80"></div>
-           </div>
-        </div>
-      ) : (
-      <div className="space-y-8 animate-fade-in">
-        <header className="flex justify-end items-end -mt-4">
-          <div className="hidden md:flex items-center gap-4">
-             <form 
-               className="relative"
-               onSubmit={(e) => {
-                 e.preventDefault();
-                 const val = new FormData(e.currentTarget).get('q') as string;
-                 if(val) window.location.href = '/dictionary?q=' + encodeURIComponent(val);
-               }}
-             >
-               <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-               <input name="q" type="text" placeholder="Search products, brands..." className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:border-brand w-64" />
-             </form>
-             <AvatarMenu />
-          </div>
-        </header>
+      <div className="space-y-10 relative">
+        
+        {/* Ambient page-level glow blob */}
+        <div className="absolute top-1/4 right-0 w-[500px] h-[500px] bg-brand/[0.03] blur-[100px] rounded-full pointer-events-none -z-10 mix-blend-multiply" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Food Profile Card */}
-          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
-            <div className="flex justify-between items-start mb-6">
-              <h2 className="font-bold text-foreground">Your Food Profile</h2>
-              <button onClick={() => setIsEditingProfile(true)} className="text-xs font-medium text-brand hover:underline">Edit goals &rarr;</button>
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-8 items-center justify-center py-4">
-              {/* Circular Score */}
-              <div className="relative w-40 h-40 flex items-center justify-center">
-                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                   <circle cx="50" cy="50" r="45" fill="none" stroke="#E8F0EA" strokeWidth="8" />
-                   <circle 
-                     cx="50" cy="50" r="45" fill="none" stroke="#1A3224" strokeWidth="8" 
-                     strokeDasharray="283" 
-                     strokeDashoffset={recentScans.length > 0 ? 283 - (283 * (recentScans.reduce((acc, s) => acc + (s.score || 0), 0) / recentScans.length)) / 100 : 79} 
-                     strokeLinecap="round" 
-                   />
-                 </svg>
-                 <div className="absolute text-center">
-                   <div className="text-4xl font-serif text-brand">
-                     {recentScans.length > 0 ? Math.round(recentScans.reduce((acc, s) => acc + (s.score || 0), 0) / recentScans.length) : 72}
-                   </div>
-                   <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">/100</div>
-                 </div>
-              </div>
+        {/* ── HERO STATS STRIP (Realistic Background) ── */}
+        <div
+          className={`bg-black rounded-3xl overflow-hidden shadow-2xl transition-all duration-700 relative group ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        >
+          {/* Parallax/Animated Image Background */}
+          <div className="absolute inset-0 bg-[url('/assets/bg/organic_leaf.jpg')] bg-cover bg-center opacity-40 mix-blend-overlay group-hover:scale-105 transition-transform duration-[20s] ease-linear" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/60" />
 
-              {/* Progress Bars */}
-              <div className="flex-1 w-full space-y-4">
-                {[
-                  { label: "Nutri-Score Average", value: recentScans.length > 0 ? Math.round(recentScans.reduce((acc, s) => acc + (s.score || 0), 0) / recentScans.length) : 76 },
-                  { label: "NOVA Average", value: recentScans.length > 0 ? Math.round(recentScans.reduce((acc, s) => acc + (s.processing_score || 0), 0) / recentScans.length) : 45 },
-                  { label: "Protein Adequacy", value: healthProfile === 'GENERAL' ? 65 : 42 },
-                  { label: "Added Sugar Limit", value: healthProfile === 'DIABETIC' ? 95 : 39 },
-                ].map(stat => (
-                  <div key={stat.label} className="flex items-center gap-4 text-xs font-medium">
-                    <span className="w-32 text-gray-600">{stat.label}</span>
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand rounded-full" style={{ width: `${stat.value}%` }}></div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-5">
+            {/* Left: score ring + greeting */}
+            <div className="lg:col-span-2 p-8 md:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 backdrop-blur-sm">
+              <div>
+                <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-4 drop-shadow-md">Your Health Score</p>
+                <div className="flex items-center gap-6">
+                  <div className="relative w-28 h-28 shrink-0">
+                    <svg className="w-full h-full transform -rotate-90 drop-shadow-xl" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="6" />
+                      <circle
+                        cx="50" cy="50" r="45" fill="none" stroke="#ffffff" strokeWidth="6"
+                        strokeDasharray="283"
+                        strokeDashoffset={mounted ? scoreOffset : 283}
+                        strokeLinecap="round"
+                        className="transition-all duration-[1400ms] ease-out"
+                        style={{ filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.4))' }}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-serif text-white">{avgScore}</span>
+                      <span className="text-[9px] text-gray-400 uppercase tracking-wider">/100</span>
                     </div>
-                    <span className="w-6 text-right text-foreground font-bold">{stat.value}</span>
                   </div>
-                ))}
+                  <div>
+                    <p className="text-white font-bold text-lg mb-1 drop-shadow-md">Overall</p>
+                    <p className="text-gray-300 text-xs leading-relaxed drop-shadow-sm">Across {recentScans.length || 0} scanned products</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1 drop-shadow-sm">Active Goal</p>
+                  <p className="text-white text-sm font-medium drop-shadow-md">{goalLabel}</p>
+                </div>
+                <button
+                  onClick={() => setIsEditingProfile(true)}
+                  className="text-[11px] text-gray-300 hover:text-white transition-colors font-medium flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md"
+                >
+                  Edit
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </button>
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-100 grid grid-cols-2 gap-4">
-               <div>
-                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Goal</p>
-                 <p className="text-sm font-medium text-foreground">
-                   {healthProfile === 'DIABETIC' ? 'Low Sugar • Glycemic Control' : healthProfile === 'HYPERTENSION' ? 'Low Sodium • Heart Health' : 'Balanced Diet • Optimal Health'}
-                 </p>
-               </div>
-               <div>
-                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Profile</p>
-                 <p className="text-sm font-medium text-foreground">{healthProfile}</p>
-               </div>
+            {/* Right: stats grid */}
+            <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/10 backdrop-blur-[2px]">
+              {[
+                { value: String(recentScans.length), label: 'Products Scanned' },
+                { value: String(avgScore), label: 'Avg Nutri-Score' },
+                { value: String(avgProcessing), label: 'Avg NOVA Score' },
+                { value: String(cleanCount), label: 'Clean Products' },
+                { value: healthProfile === 'DIABETIC' ? '95' : '39', label: 'Sugar Limit %' },
+                { value: healthProfile === 'GENERAL' ? '65' : '42', label: 'Protein Adequacy %' },
+              ].map((s, i) => (
+                <div
+                  key={i}
+                  className="p-6 md:p-8 flex flex-col justify-end hover:bg-white/[0.04] transition-colors relative overflow-hidden group/stat"
+                >
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover/stat:opacity-5 transition-opacity duration-300" />
+                  <span className="text-3xl font-serif text-white mb-1 drop-shadow-md">{s.value}</span>
+                  <span className="text-[10px] text-gray-400 uppercase tracking-wider drop-shadow-sm">{s.label}</span>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {/* Right Column: Insight & Actions */}
-          <div className="space-y-6">
-            {/* Today's Insight */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden h-48 flex flex-col justify-between">
-               <div className="relative z-10 w-2/3">
-                 <h2 className="font-bold text-foreground mb-2">Today's Insight</h2>
-                 <p className="text-sm text-gray-600 leading-relaxed">
-                   {recentScans.length > 0 
-                     ? `Your recently scanned product, ${recentScans[0].name}, scored ${recentScans[0].score}/100. Need better alternatives?` 
-                     : "Most cereals you scan tend to be high in added sugar."}
-                 </p>
-                 <Link href="/alternatives" className="text-xs font-medium text-brand hover:underline mt-4 inline-block">View details &rarr;</Link>
-               </div>
-               {/* Decorative background shape replacing image */}
-               <div className="absolute -right-12 -bottom-12 w-40 h-40 bg-brand-light rounded-full opacity-50"></div>
-            </div>
-            <div className="min-w-[140px]">
-              <Link href="/scanner" className="group block p-4 bg-white border border-gray-100 rounded-2xl hover:border-brand hover:shadow-md transition-all h-full">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 mb-3">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+        {/* ── QUICK ACTIONS (Bento with glowing hover effects) ── */}
+        <div
+          className={`transition-all duration-700 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        >
+          <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-4">Quick Actions</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-gray-200 rounded-3xl overflow-hidden border border-gray-200 shadow-sm relative">
+            
+            {[
+              { label: 'Scan Product', desc: 'Analyze any ingredient label with AI.', href: '/scanner',
+                icon: 'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z' },
+              { label: 'Dictionary', desc: 'Search 75,000+ ingredients by name or E-number.', href: '/dictionary',
+                icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+              { label: 'Food Basket', desc: 'Track cumulative nutrition across products.', href: '/basket',
+                icon: 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z' },
+              { label: 'Claims Audit', desc: 'Expose greenwashing on front-of-pack claims.', href: '/auditor',
+                icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+            ].map((a, i) => (
+              <Link key={i} href={a.href} className="group bg-white p-7 md:p-8 hover:bg-gray-50 transition-colors duration-200 relative overflow-hidden">
+                {/* Floating animated radial gradient on hover */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,rgba(26,50,36,0.03),transparent_70%)] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative z-10 w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center mb-5 group-hover:border-brand/30 group-hover:bg-brand/5 group-hover:scale-110 transition-all duration-300 ease-out">
+                  <svg className="w-5 h-5 text-gray-700 group-hover:text-brand transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={a.icon} />
+                  </svg>
                 </div>
-                <h3 className="font-bold text-sm text-foreground mb-1 group-hover:text-blue-600 transition-colors">Label Audit</h3>
-                <p className="text-[10px] text-gray-500">Verify front-of-pack claims</p>
+                <h4 className="relative z-10 font-bold text-sm text-gray-900 mb-1.5">{a.label}</h4>
+                <p className="relative z-10 text-[12px] text-gray-500 leading-relaxed">{a.desc}</p>
+                {/* Animated bottom border on hover */}
+                <div className="absolute bottom-0 left-6 right-6 h-px bg-brand scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left rounded-full shadow-[0_0_8px_rgba(26,50,36,0.5)]" />
               </Link>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="min-w-[140px]">
-              <Link href="/dictionary" className="group p-4 bg-white border border-gray-100 rounded-2xl h-full hover:border-brand hover:shadow-md transition-all flex flex-col justify-center items-center text-center">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-brand mb-2 transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        {/* ── TODAY'S INSIGHT (Image-backed left accent) ── */}
+        <div
+          className={`transition-all duration-700 delay-300 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        >
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-5">
+              {/* Left accent with image background */}
+              <div className="md:col-span-2 p-10 flex flex-col justify-center relative overflow-hidden group">
+                <div className="absolute inset-0 bg-[url('/landing-everyone.jpeg')] bg-cover bg-center opacity-40 mix-blend-multiply group-hover:scale-105 transition-transform duration-[10s] ease-linear" />
+                <div className="absolute inset-0 bg-gradient-to-r from-brand to-brand/90 mix-blend-multiply" />
+                <div className="absolute inset-0 bg-gradient-to-br from-brand/90 to-brand-dark/95" />
+                
+                <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-white/10 blur-[40px] pointer-events-none" />
+                
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+                    <p className="text-[10px] font-bold tracking-[0.25em] text-white/70 uppercase">Insight</p>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-500 group-hover:text-brand uppercase tracking-widest transition-colors">Search<br/>Database</span>
-              </Link>
-            </div>
-
-            <div className="min-w-[140px]">
-              <div className="h-full flex items-center justify-center">
-                <Link href="/basket" className="group flex flex-col items-center justify-center w-24 h-24 rounded-full border-2 border-dashed border-gray-200 hover:border-brand hover:bg-brand/5 transition-all">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 group-hover:bg-white group-hover:text-brand mb-2 transition-colors shadow-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                  </div>
-                  <span className="text-[10px] font-medium text-center text-gray-600 group-hover:text-brand">Food<br/>Basket</span>
+                  <h3 className="text-2xl font-serif text-white leading-snug drop-shadow-md">
+                    {recentScans.length > 0 ? 'Your latest scan' : 'Ready to scan'}
+                  </h3>
+                </div>
+              </div>
+              
+              {/* Right content */}
+              <div className="md:col-span-3 p-10 flex flex-col justify-center bg-white relative overflow-hidden">
+                <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-brand/[0.02] pointer-events-none" />
+                
+                <p className="text-gray-500 text-sm leading-relaxed mb-6 relative z-10">
+                  {recentScans.length > 0 && recentScans[0]
+                    ? <>Your recently scanned product, <span className="text-gray-900 font-medium">{recentScans[0]?.name || 'Unknown'}</span>, scored <span className="text-gray-900 font-bold">{recentScans[0]?.score || 0}/100</span>. Want to find healthier alternatives?</>
+                    : "Start scanning food products to unlock personalized dietary insights, risk assessments, and AI-powered alternatives."}
+                </p>
+                <Link href={recentScans.length > 0 ? "/alternatives" : "/scanner"} className="relative z-10 w-fit">
+                  <button className="group flex items-center gap-2 text-brand text-sm font-bold hover:gap-3 transition-all">
+                    {recentScans.length > 0 ? "Find alternatives" : "Start scanning"}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                  </button>
                 </Link>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Scans */}
-        <div className="pt-4">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="font-bold text-foreground">Recent Scans</h2>
-            <button className="text-xs font-medium text-gray-500 hover:text-brand">View all &rarr;</button>
-          </div>
-          
-          <div className="flex flex-col gap-3">
-            {recentScans.length === 0 ? (
-              <div className="p-8 bg-gray-50 border border-gray-100 rounded-2xl text-center">
-                <p className="text-sm text-gray-500">No recent scans found.</p>
-                <Link href="/scanner" className="text-brand font-bold text-sm mt-2 inline-block">Scan a product &rarr;</Link>
-              </div>
-            ) : (
-              recentScans.map((scan, i) => (
-                <div key={scan.id || i} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex flex-col">
-                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                      {scan.name}
-                      <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-100">
-                        {new Date(scan.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-1 max-w-2xl">
-                      {scan.ingredients && scan.ingredients.length > 0 
-                        ? scan.ingredients.map((ing: any) => ing.name).join(', ') 
-                        : 'No ingredients detected'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-6 shrink-0">
-                    <div className="flex flex-col items-end">
-                      <span className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Nutri-Score</span>
-                      <div className={`text-base font-black ${scan.score >= 75 ? 'text-green-600' : scan.score >= 45 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {scan.score}/100
-                      </div>
-                    </div>
-                    {scan.processing_score !== undefined && (
-                      <div className="flex flex-col items-end border-l border-gray-100 pl-6">
-                        <span className="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Nourient AI</span>
-                        <div className={`text-base font-black ${scan.processing_score >= 80 ? 'text-brand' : scan.processing_score >= 50 ? 'text-yellow-700' : 'text-red-700'}`}>
-                          {scan.processing_score}/100
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))
+        {/* ── RECENT SCANS ── */}
+        <div
+          className={`transition-all duration-700 delay-[450ms] ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        >
+          <div className="flex justify-between items-center mb-5 relative z-10">
+            <div>
+              <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-1">Recent Scans</p>
+              <p className="text-sm text-gray-500">{recentScans.length > 0 ? `${recentScans.length} product${recentScans.length > 1 ? 's' : ''} analyzed` : 'No products scanned yet'}</p>
+            </div>
+            {recentScans.length > 0 && (
+              <Link href="/scanner" className="group flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 text-sm font-bold text-gray-900 hover:border-gray-300 hover:shadow-sm transition-all">
+                New scan
+                <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              </Link>
             )}
           </div>
-        </div>
-        
-      </div>
-      )}
 
-      {/* Profile Edit Modal */}
+          {recentScans.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-gray-100 p-16 text-center shadow-sm">
+              <div className="w-16 h-16 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center mx-auto mb-6 relative">
+                <div className="absolute inset-0 bg-brand/5 rounded-2xl animate-ping opacity-20" style={{ animationDuration: '3s' }} />
+                <svg className="w-7 h-7 text-gray-400 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">No scans yet</h3>
+              <p className="text-sm text-gray-500 max-w-sm mx-auto mb-8">Scan a product label to start building your food intelligence profile. Your history will appear here.</p>
+              <Link href="/scanner">
+                <button className="px-8 py-3 bg-[#0D0D0D] text-white rounded-full text-sm font-bold hover:bg-black transition-all hover:scale-105 active:scale-95 shadow-[0_4px_20px_rgba(0,0,0,0.12)]">
+                  Scan your first product
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden divide-y divide-gray-100 shadow-sm">
+              {recentScans.map((scan, i) => {
+                if (!scan) return null;
+                return (
+                <div
+                  key={scan.id || i}
+                  className={`group relative p-5 md:px-8 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-brand/[0.02] transition-colors duration-300 ${
+                    mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                  }`}
+                  style={{ transitionDelay: `${550 + i * 100}ms`, transitionDuration: '600ms' }}
+                >
+                  {/* Subtle left border highlight on hover */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300" />
+                  
+                  <div className="flex-1 min-w-0 z-10">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-brand transition-colors">{scan.name}</h4>
+                      <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shrink-0 shadow-sm">
+                        {new Date(scan.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 line-clamp-1">
+                      {scan.ingredients?.length > 0 ? scan.ingredients.map((ing: any) => ing?.name || '').filter(Boolean).join(', ') : 'No ingredients detected'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-5 shrink-0 z-10">
+                    <div className="text-center">
+                      <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">Nutri</p>
+                      <span className={`text-lg font-serif font-bold ${scan.score >= 75 ? 'text-green-600' : scan.score >= 45 ? 'text-yellow-600' : 'text-red-600'}`}>{scan.score}</span>
+                    </div>
+                    {scan.processing_score !== undefined && (
+                      <>
+                        <div className="w-px h-8 bg-gray-200 group-hover:bg-gray-300 transition-colors" />
+                        <div className="text-center">
+                          <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">AI</p>
+                          <span className={`text-lg font-serif font-bold ${scan.processing_score >= 80 ? 'text-brand' : scan.processing_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{scan.processing_score}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-white group-hover:border-gray-200 transition-colors ml-2 shadow-sm group-hover:shadow">
+                      <svg className="w-4 h-4 text-gray-400 group-hover:text-brand group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </div>
+                  </div>
+                </div>
+              );})}
+            </div>
+          )}
+        </div>
+
+        {/* ── METHODOLOGY CTA (Realistic AI Lab image background) ── */}
+        <div
+          className={`transition-all duration-700 delay-[600ms] ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+        >
+          <Link href="/methodology" className="block">
+            <div className="bg-black rounded-3xl p-10 md:p-12 relative overflow-hidden group hover:shadow-[0_12px_40px_rgba(0,0,0,0.3)] transition-all duration-500">
+              {/* Photographic Background */}
+              <div className="absolute inset-0 bg-[url('/assets/bg/ai_lab.jpg')] bg-cover bg-center opacity-30 mix-blend-luminosity group-hover:scale-105 group-hover:opacity-40 transition-all duration-1000 ease-out" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              
+              {/* Scanning laser animation line */}
+              <div className="absolute top-0 left-0 bottom-0 w-1 bg-brand/50 shadow-[0_0_20px_rgba(26,50,36,0.8)] opacity-0 group-hover:opacity-100 group-hover:animate-[ping_2s_linear_infinite]" style={{ animationDuration: '3s' }} />
+
+              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div>
+                  <p className="text-[10px] font-bold tracking-[0.25em] text-white/50 uppercase mb-3 drop-shadow-md">Transparency</p>
+                  <h3 className="text-2xl font-serif text-white leading-tight drop-shadow-lg">How our AI works.</h3>
+                  <p className="text-gray-400 text-sm mt-2 max-w-md drop-shadow-sm">Read about EFSA risk models, dual-engine scoring, and ingredient origin classification.</p>
+                </div>
+                <button className="group flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-6 py-3 rounded-full text-white text-sm font-bold hover:bg-white hover:text-black transition-all shrink-0">
+                  Read methodology
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
+                </button>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+      </div>
+
+      {/* ── PROFILE EDIT MODAL ── */}
       {isEditingProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl">
-            <h2 className="text-xl font-bold mb-2 text-foreground">Edit Health Profile</h2>
-            <p className="text-sm text-gray-500 mb-6">Select your primary health context. This helps Nourient tailor recommendations and alerts for you.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={() => setIsEditingProfile(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md p-8 shadow-2xl animate-card-enter" onClick={e => e.stopPropagation()}>
+            <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-2">Settings</p>
+            <h2 className="text-2xl font-serif text-gray-900 mb-2">Health Profile</h2>
+            <p className="text-sm text-gray-500 mb-8">Select your primary health context. Nourient tailors risk assessments and scoring to your goals.</p>
             
             <div className="space-y-3 mb-8">
               {[
-                { id: 'GENERAL', label: 'General Health', desc: 'Balanced diet and overall wellness' },
-                { id: 'DIABETIC', label: 'Diabetic / Low Sugar', desc: 'Strict glycemic control, low added sugar' },
-                { id: 'HYPERTENSION', label: 'Hypertension / Low Sodium', desc: 'Heart health, strict sodium limits' }
+                { id: 'GENERAL', label: 'General Health', desc: 'Balanced diet and overall wellness', icon: '🌿' },
+                { id: 'DIABETIC', label: 'Diabetic / Low Sugar', desc: 'Strict glycemic control, low added sugar', icon: '🩸' },
+                { id: 'HYPERTENSION', label: 'Hypertension / Low Sodium', desc: 'Heart health, strict sodium limits', icon: '❤️' }
               ].map(opt => (
-                <div 
+                <div
                   key={opt.id}
                   onClick={() => setHealthProfile(opt.id)}
-                  className={`p-4 rounded-xl border cursor-pointer transition-colors ${healthProfile === opt.id ? 'border-brand bg-brand-light/20' : 'border-gray-200 hover:border-gray-300'}`}
+                  className={`group relative p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${
+                    healthProfile === opt.id
+                      ? 'border-brand bg-brand-light/20'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`font-bold ${healthProfile === opt.id ? 'text-brand' : 'text-foreground'}`}>{opt.label}</span>
-                    {healthProfile === opt.id && <svg className="w-5 h-5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                    <span className="flex items-center gap-3">
+                      <span className="text-lg">{opt.icon}</span>
+                      <span className={`font-bold text-sm ${healthProfile === opt.id ? 'text-gray-900' : 'text-gray-700'}`}>{opt.label}</span>
+                    </span>
+                    {healthProfile === opt.id && (
+                      <div className="w-5 h-5 rounded-full bg-brand flex items-center justify-center shadow-sm">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs text-gray-500">{opt.desc}</span>
+                  <span className="text-xs text-gray-500 ml-10">{opt.desc}</span>
                 </div>
               ))}
             </div>
 
             <div className="flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setIsEditingProfile(false)}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+                className="px-5 py-2.5 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => handleSaveProfile(healthProfile)}
                 disabled={savingProfile}
-                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50"
+                className="px-6 py-2.5 bg-[#0D0D0D] text-white rounded-full text-sm font-bold hover:bg-black disabled:opacity-50 transition-all hover:scale-105 active:scale-95 shadow-sm"
               >
                 {savingProfile ? 'Saving...' : 'Save Profile'}
               </button>

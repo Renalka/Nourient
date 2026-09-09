@@ -96,3 +96,36 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Dashboard Animations */
+@keyframes bar-grow {
+  from { width: 0%; }
+}
+.animate-bar-grow {
+  animation: bar-grow 0.8s ease-out forwards;
+}
+
+@keyframes score-ring {
+  from { stroke-dashoffset: 283; }
+}
+.animate-score-ring {
+  animation: score-ring 1.2s ease-out forwards;
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-card-enter {
+  animation: card-enter 0.5s ease-out both;
+}
+
+.delay-75  { animation-delay: 75ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-225 { animation-delay: 225ms; }
+.delay-350 { animation-delay: 350ms; }
+.delay-450 { animation-delay: 450ms; }
+.delay-550 { animation-delay: 550ms; }
+.delay-650 { animation-delay: 650ms; }
+.delay-750 { animation-delay: 750ms; }
+.delay-850 { animation-delay: 850ms; }

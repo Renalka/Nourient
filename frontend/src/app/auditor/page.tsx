@@ -9,6 +9,7 @@ export default function AuditorPage() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusText, setStatusText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const [result, setResult] = useState<any>(null);
   const [audit, setAudit] = useState<any>(null);

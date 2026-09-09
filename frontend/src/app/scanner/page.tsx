@@ -8,11 +8,11 @@ import AvatarMenu from '@/components/AvatarMenu';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 const getGrade = (score: number) => {
-  if (score >= 90) return { letter: 'A', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-500' };
-  if (score >= 75) return { letter: 'B', color: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-400' };
-  if (score >= 60) return { letter: 'C', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', circle: 'border-yellow-500' };
-  if (score >= 40) return { letter: 'D', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', circle: 'border-orange-500' };
-  return { letter: 'E', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', circle: 'border-red-500' };
+  if (score >= 90) return { letter: 'A', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-500', fill: 'bg-green-500' };
+  if (score >= 75) return { letter: 'B', color: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-400', fill: 'bg-green-400' };
+  if (score >= 60) return { letter: 'C', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', circle: 'border-yellow-500', fill: 'bg-yellow-500' };
+  if (score >= 40) return { letter: 'D', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', circle: 'border-orange-500', fill: 'bg-orange-500' };
+  return { letter: 'E', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', circle: 'border-red-500', fill: 'bg-red-500' };
 };
 
 const getFormulationTier = (score: number) => {
@@ -30,7 +30,7 @@ export default function ScannerPage() {
   const [file2, setFile2] = useState<File | null>(null);
   const [previewUrl2, setPreviewUrl2] = useState<string | null>(null);
   const [step, setStep] = useState<1|2|3|4>(1);
-  const [scanMode, setScanMode] = useState<'ingredients' | 'front' | 'nutrition'>('ingredients'); // 1: Capture, 2: Review, 3: Analyze, 4: Results
+  const [scanMode, setScanMode] = useState<'ingredients' | 'front' | 'nutrition' | 'claims'>('ingredients'); // 1: Capture, 2: Review, 3: Analyze, 4: Results
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [addingToBasket, setAddingToBasket] = useState(false);
