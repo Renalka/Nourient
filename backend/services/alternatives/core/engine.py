@@ -1,74 +1,88 @@
-from google.cloud import bigquery
-from google.oauth2 import service_account
+import requests
+import logging
 from typing import List, Dict, Any
+
+logger = logging.getLogger(__name__)
 
 class AlternativesEngine:
     def __init__(self):
-        self.creds = service_account.Credentials.from_service_account_file('gcp-credentials.json')
-        self.client = bigquery.Client(credentials=self.creds, project="nourient")
-        self.table_id = "nourient.food_intelligence.canonical_products"
+        # We use Open Food Facts instead of BigQuery to remain 100% free
+        self.api_url = "https://world.openfoodfacts.org/cgi/search.pl"
+        self.headers = {'User-Agent': 'NourientApp/1.0 - Python'}
 
     def find_better_alternatives(self, category: str, current_sugar: float, current_protein: float, current_price: float) -> List[Dict[str, Any]]:
         """
-        Finds alternatives in the same category that are generally healthier.
+        Finds alternatives in the same category that are generally healthier using Open Food Facts.
         Prioritizes lower sugar and higher protein.
         """
         if not category:
             return []
 
-        # Find products in the same category with less sugar or more protein
-        # Order by a blended "better" score (lower sugar is good, higher protein is good, lower price is good)
-        query = f"""
-        SELECT 
-            product_id, name, brand, price_inr, sugar_g, protein_g, sodium_mg, overall_score,
-            (protein_g / NULLIF(price_inr, 0)) as protein_per_rupee
-        FROM `{self.table_id}`
-        WHERE category = @category 
-          AND (sugar_g < @current_sugar OR protein_g > @current_protein OR overall_score > 50)
-        ORDER BY overall_score DESC, protein_g DESC, sugar_g ASC
-        LIMIT 3
-        """
-        
-        job_config = bigquery.QueryJobConfig(
-            query_parameters=[
-                bigquery.ScalarQueryParameter("category", "STRING", category),
-                bigquery.ScalarQueryParameter("current_sugar", "FLOAT", current_sugar),
-                bigquery.ScalarQueryParameter("current_protein", "FLOAT", current_protein)
-            ]
-        )
+        # Standardize category for search
+        category_clean = category.lower().strip()
+        if not category_clean:
+            category_clean = "snack"
+
+        params = {
+            'action': 'process',
+            'json': 'true',
+            'tagtype_0': 'countries',
+            'tag_contains_0': 'contains',
+            'tag_0': 'india',
+            'tagtype_1': 'categories',
+            'tag_contains_1': 'contains',
+            'tag_1': category_clean,
+            'sort_by': 'nutriscore_score',
+            'page_size': '10'
+        }
         
         results = []
         try:
-            rows = self.client.query(query, job_config=job_config).result()
-            for row in rows:
-                # Calculate Deltas
-                sugar_delta = row.sugar_g - current_sugar
-                protein_delta = row.protein_g - current_protein
-                price_delta = row.price_inr - current_price
+            response = requests.get(self.api_url, params=params, headers=self.headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+            
+            for p in data.get('products', []):
+                nutriments = p.get('nutriments', {})
+                sugar_g = float(nutriments.get('sugars_100g', 0) or 0)
+                protein_g = float(nutriments.get('proteins_100g', 0) or 0)
                 
-                deltas = []
-                if sugar_delta < 0:
-                    deltas.append(f"{abs(sugar_delta)}g less sugar")
-                if protein_delta > 0:
-                    deltas.append(f"{protein_delta}g more protein")
-                if price_delta < 0:
-                    deltas.append(f"₹{abs(price_delta)} cheaper")
+                # Check if it's actually better
+                if sugar_g < current_sugar or protein_g > current_protein:
+                    sugar_delta = sugar_g - current_sugar
+                    protein_delta = protein_g - current_protein
                     
-                if not deltas:
-                    deltas.append("Higher overall health score")
+                    deltas = []
+                    if sugar_delta < 0:
+                        deltas.append(f"{abs(round(sugar_delta, 1))}g less sugar")
+                    if protein_delta > 0:
+                        deltas.append(f"{round(protein_delta, 1)}g more protein")
+                        
+                    if not deltas:
+                        deltas.append("Healthier overall profile")
 
-                results.append({
-                    "product_id": row.product_id,
-                    "name": row.name,
-                    "brand": row.brand,
-                    "price_inr": row.price_inr,
-                    "sugar_g": row.sugar_g,
-                    "protein_g": row.protein_g,
-                    "overall_score": row.overall_score,
-                    "protein_per_rupee": round(row.protein_per_rupee, 2) if row.protein_per_rupee else 0,
-                    "improvements": deltas
-                })
+                    grade = p.get('nutriscore_grade', 'c').lower()
+                    overall_score = 95 if grade == 'a' else 80 if grade == 'b' else 65 if grade == 'c' else 50
+                    
+                    name = p.get('product_name', '')
+                    if not name:
+                        continue
+
+                    results.append({
+                        "product_id": str(p.get('_id', '')),
+                        "name": name,
+                        "brand": p.get('brands', 'Unknown Brand'),
+                        "price_inr": 0, # OFF doesn't reliably track live prices
+                        "sugar_g": sugar_g,
+                        "protein_g": protein_g,
+                        "overall_score": overall_score,
+                        "protein_per_rupee": 0,
+                        "improvements": deltas
+                    })
+                    
+                    if len(results) >= 3:
+                        break
         except Exception as e:
-            print(f"BigQuery Error: {e}")
+            logger.error(f"OFF API Error: {e}")
             
         return results
