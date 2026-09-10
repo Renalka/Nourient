@@ -454,32 +454,31 @@ export default function ScannerPage() {
   if (loading) return null;
 
   return (
-    <SidebarLayout
-      headerContent={
-        <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-medium">
-          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 1 ? 'text-foreground' : 'text-gray-400'}`}>
-            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 1 ? 'bg-brand text-white' : 'bg-gray-100'}`}>1</span>
-            <span className="hidden sm:inline">Capture</span>
-          </div>
-          <div className="w-2 sm:w-8 h-px bg-gray-200"></div>
-          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 2 ? 'text-foreground' : 'text-gray-400'}`}>
-            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 2 ? 'bg-brand text-white' : 'bg-gray-100'}`}>2</span>
-            <span className="hidden sm:inline">Review</span>
-          </div>
-          <div className="w-2 sm:w-8 h-px bg-gray-200"></div>
-          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 3 ? 'text-foreground' : 'text-gray-400'}`}>
-            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 3 ? 'bg-brand text-white' : 'bg-gray-100'}`}>3</span>
-            <span className="hidden sm:inline">Analyze</span>
-          </div>
-          <div className="w-2 sm:w-8 h-px bg-gray-200"></div>
-          <div className={`flex items-center gap-1 sm:gap-2 ${step >= 4 ? 'text-foreground' : 'text-gray-400'}`}>
-            <span className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] ${step >= 4 ? 'bg-brand text-white' : 'bg-gray-100'}`}>4</span>
-            <span className="hidden sm:inline">Results</span>
-          </div>
-        </div>
-      }
-    >
+    <SidebarLayout>
       <div className="flex flex-col h-full w-full">
+
+            {/* Step Progress Indicator */}
+            <div className="flex items-center justify-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-medium mb-6 py-3 px-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div className={`flex items-center gap-1 sm:gap-2 ${step >= 1 ? 'text-foreground' : 'text-gray-400'}`}>
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold ${step >= 1 ? 'bg-brand text-white' : 'bg-gray-100'}`}>1</span>
+                <span className="hidden sm:inline">Capture</span>
+              </div>
+              <div className={`w-6 sm:w-10 h-px ${step >= 2 ? 'bg-brand' : 'bg-gray-200'}`} />
+              <div className={`flex items-center gap-1 sm:gap-2 ${step >= 2 ? 'text-foreground' : 'text-gray-400'}`}>
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold ${step >= 2 ? 'bg-brand text-white' : 'bg-gray-100'}`}>2</span>
+                <span className="hidden sm:inline">Review</span>
+              </div>
+              <div className={`w-6 sm:w-10 h-px ${step >= 3 ? 'bg-brand' : 'bg-gray-200'}`} />
+              <div className={`flex items-center gap-1 sm:gap-2 ${step >= 3 ? 'text-foreground' : 'text-gray-400'}`}>
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold ${step >= 3 ? 'bg-brand text-white' : 'bg-gray-100'}`}>3</span>
+                <span className="hidden sm:inline">Analyze</span>
+              </div>
+              <div className={`w-6 sm:w-10 h-px ${step >= 4 ? 'bg-brand' : 'bg-gray-200'}`} />
+              <div className={`flex items-center gap-1 sm:gap-2 ${step >= 4 ? 'text-foreground' : 'text-gray-400'}`}>
+                <span className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-bold ${step >= 4 ? 'bg-brand text-white' : 'bg-gray-100'}`}>4</span>
+                <span className="hidden sm:inline">Results</span>
+              </div>
+            </div>
             
             {error && (
               <div className="mb-6 p-4 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-medium text-center">

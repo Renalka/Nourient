@@ -147,140 +147,181 @@ export default function BasketPage() {
     <SidebarLayout
       pageTitle="Basket Intelligence"
       pageSubtitle="Analyze your dietary habits based on product processing and consumption frequency."
-      headerContent={
-        <div className="hidden sm:flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400">
-          <svg className="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-          Behavioral Basket Intelligence
-        </div>
-      }
     >
-      <div className="space-y-8 animate-fade-in">
+      <div className="space-y-8 animate-fade-in pb-12">
 
         {error && (
-          <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-sm font-medium">
+          <div className="p-4 bg-zinc-900 text-white rounded-xl border border-zinc-800 text-sm font-medium">
             {error}
           </div>
         )}
 
         {isLoading ? (
-          <div className="text-sm font-medium text-gray-400 animate-pulse py-8">
-            Analyzing basket habits...
+          <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="w-8 h-8 border-4 border-zinc-200 border-t-black rounded-full animate-spin"></div>
+            <div className="text-sm font-medium tracking-widest uppercase text-zinc-400 animate-pulse">
+              Computing Behavioral Matrix
+            </div>
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Warnings Section */}
+            
+            {/* Warnings Section - High Contrast Brutalist Style */}
             {analysis.isHighRisk && (
-              <div className="border border-red-100 p-6 bg-red-50 rounded-2xl space-y-4 shadow-sm">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-red-700">Epidemiological Risk Alert</h2>
-                <div className="bg-white border border-red-100 rounded-xl p-4 text-sm font-medium text-red-600 flex items-start gap-3">
-                   <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                   Based on your selected frequencies, {analysis.upfProportion.toFixed(1)}% of your weekly servings consist of Ultra-Processed Foods (NOVA Group 4). Clinical studies suggest keeping this below 20% to mitigate long-term metabolic risks.
+              <div className="relative overflow-hidden bg-black text-white p-6 md:p-8 rounded-3xl shadow-2xl group">
+                {/* Animated background element */}
+                <div className="absolute -right-20 -top-20 w-64 h-64 bg-white/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
+                
+                <div className="relative z-10 flex flex-col md:flex-row gap-6 items-start md:items-center">
+                  <div className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center shrink-0">
+                    <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-white/50 mb-2">Epidemiological Risk Alert</h2>
+                    <p className="text-sm md:text-base font-medium leading-relaxed max-w-3xl">
+                      Based on your selected frequencies, <span className="font-bold border-b border-white border-dashed">{analysis.upfProportion.toFixed(1)}%</span> of your weekly servings consist of Ultra-Processed Foods (NOVA Group 4). Clinical studies suggest keeping this below 20% to mitigate long-term metabolic risks.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Aggregated Scores */}
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-8 items-center justify-between">
+            {/* Aggregated Scores - B&W Aesthetic */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
-              <div className="flex items-center gap-6">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#f3f4f6" strokeWidth="8" />
-                    <circle cx="50" cy="50" r="45" fill="none" stroke={analysis.habitScore > 70 ? "#22c55e" : analysis.habitScore > 40 ? "#eab308" : "#ef4444"} strokeWidth="8" strokeDasharray="283" strokeDashoffset={283 - (283 * analysis.habitScore / 100)} strokeLinecap="round" className="transition-all duration-1000" />
-                  </svg>
-                  <div className="absolute text-center flex flex-col items-center">
-                    <span className="text-2xl font-serif text-foreground leading-none">{Math.round(analysis.habitScore)}</span>
+              {/* Primary Habit Score Card */}
+              <div className="col-span-1 md:col-span-2 bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm flex flex-col md:flex-row gap-8 items-center justify-between group hover:border-black transition-colors duration-300">
+                <div className="flex items-center gap-8">
+                  <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      {/* Track */}
+                      <circle cx="50" cy="50" r="45" fill="none" stroke="#f4f4f5" strokeWidth="6" />
+                      {/* Progress */}
+                      <circle 
+                        cx="50" cy="50" r="45" fill="none" stroke="black" strokeWidth="6" 
+                        strokeDasharray="283" 
+                        strokeDashoffset={283 - (283 * analysis.habitScore / 100)} 
+                        strokeLinecap="round" 
+                        className="transition-all duration-1500 ease-out" 
+                      />
+                    </svg>
+                    <div className="absolute text-center flex flex-col items-center">
+                      <span className="text-4xl font-serif font-bold text-black tracking-tighter leading-none group-hover:scale-110 transition-transform duration-500">
+                        {Math.round(analysis.habitScore)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Clinical Habit Score</h2>
-                  <p className="text-sm text-gray-500 max-w-xs">An index based on the FSA-NPS (nutritional quality) and NOVA (processing) standards, weighted by your consumption frequency.</p>
-                </div>
-              </div>
-
-              <div className="flex gap-8 w-full md:w-auto">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">UPF Proportion</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-serif text-foreground">{Math.round(analysis.upfProportion)}</span>
-                    <span className="text-sm font-sans text-gray-400">%</span>
-                  </div>
-                </div>
-                <div className="w-px h-12 bg-gray-100"></div>
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Avg Quality (FSA)</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-serif text-foreground">{Math.round(analysis.nutriAverage)}</span>
-                    <span className="text-sm font-sans text-gray-400">/100</span>
+                  <div>
+                    <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2">Clinical Habit Score</h2>
+                    <p className="text-sm text-zinc-500 max-w-sm leading-relaxed">
+                      An index based on nutritional quality (FSA-NPS) and processing (NOVA), dynamically weighted by your actual consumption frequency.
+                    </p>
                   </div>
                 </div>
               </div>
 
+              {/* Secondary Metrics */}
+              <div className="col-span-1 flex flex-col gap-6">
+                <div className="bg-white p-6 rounded-3xl border border-zinc-200 shadow-sm flex-1 flex flex-col justify-center hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1">UPF Proportion</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-serif font-bold text-black tracking-tighter">{Math.round(analysis.upfProportion)}</span>
+                    <span className="text-sm font-bold text-zinc-300">%</span>
+                  </div>
+                </div>
+                <div className="bg-black p-6 rounded-3xl shadow-sm flex-1 flex flex-col justify-center group hover:-translate-y-1 hover:shadow-xl hover:shadow-black/20 transition-all duration-300">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 mb-1">Avg Quality (FSA)</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-serif font-bold text-white tracking-tighter group-hover:text-zinc-200 transition-colors">{Math.round(analysis.nutriAverage)}</span>
+                    <span className="text-sm font-bold text-zinc-600">/100</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Frequency Matrix */}
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-              <div className="flex justify-between items-center mb-8">
+            <div className="bg-white p-6 md:p-8 rounded-3xl border border-zinc-200 shadow-sm">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 border-b border-zinc-100 pb-6">
                 <div>
-                  <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">Behavioral Matrix ({basketItems.length})</h2>
-                  <p className="text-sm text-gray-500">How often do you consume these products?</p>
+                  <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2">Behavioral Matrix <span className="text-black bg-zinc-100 px-2 py-0.5 rounded-full ml-2">{basketItems.length} Items</span></h2>
+                  <p className="text-sm text-zinc-500">Fine-tune your consumption frequency to see how it impacts your long-term health metrics.</p>
                 </div>
                 {basketItems.length > 0 && (
-                  <button onClick={clearBasket} className="text-xs font-medium text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
+                  <button 
+                    onClick={clearBasket} 
+                    className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 hover:text-black hover:bg-zinc-100 px-4 py-2 rounded-full transition-all active:scale-95"
+                  >
                     Clear Basket
                   </button>
                 )}
               </div>
               
               {basketItems.length === 0 ? (
-                <div className="py-12 border-2 border-dashed border-gray-100 rounded-xl text-center">
-                  <p className="text-sm text-gray-400">Your basket is empty. Scan products and add them to your basket.</p>
+                <div className="py-20 flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 rounded-full bg-zinc-50 border border-zinc-200 flex items-center justify-center mb-4">
+                    <svg className="w-6 h-6 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                  </div>
+                  <p className="text-sm font-medium text-zinc-400">Your basket is perfectly clean.<br/>Scan products to begin analysis.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {basketItems.map((item: any, idx: number) => {
                     const freq = frequencies[idx] || "weekly";
                     const recommendation = item.score?.overall_recommendation || "UNKNOWN";
                     return (
-                      <div key={idx} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:bg-white hover:shadow-sm transition-all group">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-bold text-sm text-foreground">{item.name || 'Unnamed Product'}</h3>
+                      <div 
+                        key={idx} 
+                        className="p-4 rounded-2xl border border-zinc-100 bg-white flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 hover:border-black hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group animate-card-enter"
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                            <h3 className="font-bold text-sm text-black truncate">{item.name || 'Unnamed Product'}</h3>
+                            {item.source === 'off_alternative' ? (
+                              <span className="shrink-0 bg-zinc-100 text-zinc-500 border border-zinc-200 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg> Discovered
+                              </span>
+                            ) : (
+                              <span className="shrink-0 bg-emerald-50 text-emerald-600 border border-emerald-100 text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg> Scanned
+                              </span>
+                            )}
                             {recommendation.includes("LIMIT") && (
-                              <span className="bg-red-100 text-red-700 text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 rounded">Red Flag</span>
+                              <span className="shrink-0 bg-black text-white text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full">High Risk</span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500 flex items-center gap-2">
-                            <span>Processing Score: {item.score?.processing_score || 50}/100</span>
+                          <div className="text-[11px] font-medium tracking-wide text-zinc-400 uppercase flex items-center gap-2">
+                            <span>Processing Score: <span className="text-zinc-900">{item.score?.processing_score || 50}</span>/100</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 w-full md:w-auto">
-                          <div className="flex-1 md:flex-none flex bg-gray-100/50 p-1 rounded-xl border border-gray-200/50">
-                            <button 
-                              onClick={() => handleFreqChange(idx, "daily")}
-                              className={`flex-1 md:w-24 py-1.5 text-xs font-bold rounded-lg transition-colors ${freq === 'daily' ? 'bg-white shadow-sm text-foreground' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                              Daily
-                            </button>
-                            <button 
-                              onClick={() => handleFreqChange(idx, "weekly")}
-                              className={`flex-1 md:w-24 py-1.5 text-xs font-bold rounded-lg transition-colors ${freq === 'weekly' ? 'bg-white shadow-sm text-foreground' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                              Weekly
-                            </button>
-                            <button 
-                              onClick={() => handleFreqChange(idx, "occasional")}
-                              className={`flex-1 md:w-28 py-1.5 text-xs font-bold rounded-lg transition-colors ${freq === 'occasional' ? 'bg-white shadow-sm text-foreground' : 'text-gray-400 hover:text-gray-600'}`}
-                            >
-                              Occasional
-                            </button>
+
+                        <div className="flex items-center gap-4 w-full lg:w-auto">
+                          {/* Toggle Group */}
+                          <div className="flex-1 lg:flex-none flex bg-zinc-100/80 p-1 rounded-xl">
+                            {['daily', 'weekly', 'occasional'].map((option) => (
+                              <button 
+                                key={option}
+                                onClick={() => handleFreqChange(idx, option as any)}
+                                className={`flex-1 lg:w-24 py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all duration-200 ${
+                                  freq === option 
+                                    ? 'bg-black text-white shadow-md scale-100' 
+                                    : 'text-zinc-500 hover:text-black hover:bg-zinc-200/50 scale-95 hover:scale-100'
+                                }`}
+                              >
+                                {option}
+                              </button>
+                            ))}
                           </div>
+                          
+                          {/* Delete Button */}
                           <button 
                             onClick={() => removeItem(idx)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100 shrink-0"
+                            className="p-2.5 text-zinc-300 hover:text-white hover:bg-black rounded-xl transition-all duration-200 shrink-0 group/btn"
                             title="Remove item"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            <svg className="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                           </button>
                         </div>
                       </div>

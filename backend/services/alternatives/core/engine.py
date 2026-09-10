@@ -61,32 +61,46 @@ class AlternativesEngine:
             'tag_contains_1': 'contains',
             'tag_1': off_tag,
             'sort_by': 'nutriscore_score',
-            'page_size': '24'
+            'page_size': '50'
         }
         
         results = []
         try:
             import time
-            def fetch_with_retry(req_params, max_retries=2):
+            from requests.exceptions import Timeout, RequestException
+
+            def fetch_with_retry(req_params, max_retries=3):
                 for attempt in range(max_retries):
                     try:
-                        resp = requests.get(self.api_url, params=req_params, headers=self.headers, timeout=4)
-                        if resp.status_code == 200:
-                            return resp
-                    except Exception as e:
-                        logger.warning(f"Request attempt {attempt+1} failed: {e}")
-                    time.sleep(0.1)
-                return requests.get(self.api_url, params=req_params, headers=self.headers, timeout=4)
+                        resp = requests.get(self.api_url, params=req_params, headers=self.headers, timeout=15)
+                        if resp.status_code == 503:
+                            logger.warning(f"OFF API returned 503 for {category_clean}, falling back to free-text search.")
+                            return None
+                        resp.raise_for_status()
+                        return resp
+                    except (Timeout, RequestException) as e:
+                        logger.warning(f"Request attempt {attempt + 1} failed: {e}")
+                        if attempt == max_retries - 1:
+                            logger.error(f"OFF API Error: {e}")
+                            return None
+                        time.sleep(1.0 + attempt)  # Exponential backoff: 1s, 2s, 3s
+                return None
 
             response = fetch_with_retry(params)
             
-            if response.status_code != 200:
-                logger.warning(f"OFF API returned {response.status_code} for {category_clean}, falling back to free-text search.")
+            is_fallback = False
+            if response is None or response.status_code != 200:
+                status_code = response.status_code if response else 503
+                logger.warning(f"OFF API returned {status_code} for {category_clean}, falling back to free-text search.")
                 del params['tagtype_1']
                 del params['tag_contains_1']
                 del params['tag_1']
                 params['search_terms'] = category_clean
                 response = fetch_with_retry(params)
+                is_fallback = True
+                
+            if response is None:
+                raise Exception("OFF API exhausted all retries and failed.")
                 
             response.raise_for_status()
             data = response.json()
@@ -99,11 +113,11 @@ class AlternativesEngine:
                 if not name:
                     continue
                     
-                # Strict taxonomy enforcement to prevent fallback free-text searches 
-                # from polluting results with wrong product types (e.g., food instead of beverage)
-                cat_tags = p.get('categories_tags', [])
-                if not any(off_tag == tag.lower() for tag in cat_tags):
-                    continue
+                # Strict taxonomy enforcement ONLY if not a fallback free-text search
+                if not is_fallback:
+                    cat_tags = p.get('categories_tags', [])
+                    if not any(off_tag == tag.lower() for tag in cat_tags):
+                        continue
                     
                 nutriments = p.get('nutriments', {})
                 
@@ -178,6 +192,8 @@ class AlternativesEngine:
                 overall_score = 95 if grade == 'a' else 80 if grade == 'b' else 65 if grade == 'c' else 50
                 betterment_score += overall_score
                 
+                energy_kcal = _get_macro(nutriments, 'energy-kcal_100g') or 0
+                
                 candidates.append({
                     "product_id": str(p.get('_id', '')),
                     "name": name,
@@ -186,6 +202,8 @@ class AlternativesEngine:
                     "overall_score": overall_score,
                     "betterment_score": int(betterment_score),
                     "improvements": deltas,
+                    "ingredients_text": p.get('ingredients_text', ''),
+                    "energy_kcal_100g": energy_kcal,
                     "sugar_g": sugar_g,
                     "protein_g": protein_g,
                     "fat_g": fat_g,

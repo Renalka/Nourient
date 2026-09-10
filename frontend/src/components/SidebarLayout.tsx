@@ -4,33 +4,29 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import AvatarMenu from './AvatarMenu';
-
-import Breadcrumbs from './Breadcrumbs'; // Assumes you have this
+import Breadcrumbs from './Breadcrumbs';
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
-  headerContent?: React.ReactNode;
   pageTitle?: string;
   pageSubtitle?: string;
 }
 
 export default function SidebarLayout({ 
   children, 
-  headerContent,
   pageTitle,
   pageSubtitle
 }: SidebarLayoutProps) {
   const pathname = usePathname();
   const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const displayName = user?.email?.split('@')[0] || "U";
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
-    { name: 'Scan', path: '/scanner', icon: 'M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z' },
-    { name: 'Dictionary', path: '/dictionary', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+    { name: 'Dashboard', path: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+    { name: 'Scan', path: '/scanner', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { name: 'Dictionary', path: '/dictionary', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
     { name: 'Alternatives', path: '/alternatives', icon: 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4' },
-    { name: 'Basket', path: '/basket', icon: 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z' },
+    { name: 'Basket', path: '/basket', icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z' },
     { name: 'Methodology', path: '/methodology', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
   ];
 
@@ -38,90 +34,120 @@ export default function SidebarLayout({
     <div className="flex h-screen bg-background font-sans text-foreground">
       
       {/* Off-canvas Left Pane (Drawer) */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out shadow-2xl ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full justify-between">
-          <div>
-            <div className="p-6 flex justify-between items-center border-b border-gray-100">
-              <span className="font-bold tracking-widest text-xs text-gray-400 uppercase">Navigation</span>
-              <button onClick={() => setMenuOpen(false)} className="text-gray-400 hover:text-gray-600 focus:outline-none bg-gray-50 hover:bg-gray-100 p-1 rounded-lg">
+      <div className={`fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-300 ease-in-out ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex flex-col h-full">
+          {/* Drawer Header */}
+          <div className="p-6 bg-brand">
+            <div className="flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-2.5 mb-3">
+                  <img src="/logo.png" alt="Nourient" className="w-7 h-7 object-contain brightness-0 invert" />
+                  <span className="text-white font-bold tracking-[0.2em] text-xs uppercase">Nourient</span>
+                </div>
+                <p className="text-white/50 text-[10px] font-medium tracking-wider uppercase">Nutrition Intelligence</p>
+              </div>
+              <button onClick={() => setMenuOpen(false)} className="text-white/40 hover:text-white transition-colors p-1 -mr-1 -mt-1">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            
-            <nav className="mt-4 px-4 space-y-2">
-              {navItems.map((item) => {
-                const isActive = pathname === item.path;
-                return (
-                  <Link key={item.name} href={item.path} onClick={() => setMenuOpen(false)}>
-                    <span className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                      isActive ? 'bg-brand text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-brand'
-                    }`}>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} /></svg>
-                      {item.name}
-                    </span>
-                  </Link>
-                );
-              })}
-            </nav>
           </div>
           
+          <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+            {navItems.map((item) => {
+              const isActive = pathname === item.path;
+              return (
+                <Link key={item.name} href={item.path} onClick={() => setMenuOpen(false)}>
+                  <span className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-brand text-white shadow-md shadow-brand/20' 
+                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                  }`}>
+                    <svg className="w-[18px] h-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth={isActive ? 2.5 : 1.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d={item.icon} /></svg>
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </nav>
 
+          {/* Drawer Footer */}
+          <div className="p-4 border-t border-gray-100">
+            <p className="text-[10px] text-gray-300 text-center tracking-wider">© 2026 Nourient</p>
+          </div>
         </div>
       </div>
 
       {/* Main Content Area */}
       <main className="flex-1 bg-background relative flex flex-col h-screen overflow-hidden">
         
-        {/* Global Enforced Top Bar (Static/Fixed) */}
-        <header className="border-b border-gray-200 bg-white px-4 md:px-8 py-3 flex justify-between items-center shrink-0 z-40 shadow-sm relative">
-           
-           {/* Left Section: Hamburger + Logo */}
-           <div className="flex items-center gap-3 md:gap-6 lg:w-1/3">
-             <button onClick={() => setMenuOpen(true)} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors focus:outline-none">
-               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
-             </button>
-             
-             <Link href="/" className="flex items-center gap-2">
-               <img src="/icon.png" alt="Nourient Logo" className="w-8 h-8 object-contain" />
-               <span className="font-bold tracking-widest text-sm text-brand uppercase hidden md:block">Nourient</span>
-             </Link>
-           </div>
-           
-           {/* Center Section: Navigation Links (Desktop) */}
-           <div className="hidden lg:flex flex-1 justify-center gap-2">
-             {navItems.map(item => {
-               const isActive = pathname === item.path;
-               return (
-                 <Link key={item.name} href={item.path}>
-                   <span className={`px-5 py-2 rounded-full text-xs font-bold transition-colors ${
-                     isActive ? 'bg-brand-light text-brand' : 'text-gray-500 hover:bg-gray-50 hover:text-foreground'
-                   }`}>
-                     {item.name}
-                   </span>
+        {/* ── Top Bar ── */}
+        <header className="sticky top-0 z-40">
+          {/* Main bar */}
+          <div className="bg-brand-dark">
+            <div className="px-4 md:px-8 h-14 flex items-center justify-between">
+               
+               {/* Left: Hamburger + Logo */}
+               <div className="flex items-center gap-4 shrink-0">
+                 <button 
+                   onClick={() => setMenuOpen(true)} 
+                   className="lg:hidden p-2 -ml-2 text-white/50 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 focus:outline-none"
+                 >
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                   </svg>
+                 </button>
+                 
+                 <Link href="/" className="flex items-center gap-2.5 group">
+                   <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/15 transition-colors">
+                     <img src="/logo.png" alt="Nourient" className="w-5 h-5 object-contain brightness-0 invert" />
+                   </div>
+                   <div className="hidden md:flex flex-col">
+                     <span className="text-[13px] font-bold tracking-[0.18em] text-white uppercase leading-none">Nourient</span>
+                     <span className="text-[9px] font-medium tracking-[0.15em] text-white/30 uppercase mt-0.5">Intelligence</span>
+                   </div>
                  </Link>
-               );
-             })}
-           </div>
 
-           {/* Mobile Center (headerContent) */}
-           <div className="lg:hidden flex-1 flex justify-center overflow-hidden px-2">
-             {headerContent}
-           </div>
-           
-           {/* Right Section: HeaderContent (Desktop) + Avatar */}
-           <div className="flex items-center justify-end gap-4 lg:w-1/3">
-             <div className="hidden lg:block shrink-0">
-               {headerContent}
-             </div>
-             <div className="shrink-0">
-               <AvatarMenu />
-             </div>
-           </div>
+                 {/* Vertical divider */}
+                 <div className="hidden lg:block w-px h-7 bg-white/10 ml-2" />
+               </div>
+               
+               {/* Center: Navigation Links (Desktop) */}
+               <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center">
+                 {navItems.map(item => {
+                   const isActive = pathname === item.path;
+                   return (
+                     <Link key={item.name} href={item.path}>
+                       <span className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg text-[12px] font-semibold uppercase tracking-wider transition-all duration-200 ${
+                         isActive 
+                           ? 'text-white bg-white/10'
+                           : 'text-white/40 hover:text-white/80 hover:bg-white/5'
+                       }`}>
+                         <svg className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-emerald-400' : 'text-white/25 group-hover:text-white/50'}`} fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                         </svg>
+                         {item.name}
+                         {isActive && (
+                           <span className="absolute -bottom-[11px] left-3 right-3 h-[2px] bg-emerald-400 rounded-full" />
+                         )}
+                       </span>
+                     </Link>
+                   );
+                 })}
+               </nav>
+               
+               {/* Right: Avatar only */}
+               <div className="flex items-center justify-end shrink-0">
+                 <AvatarMenu />
+               </div>
+            </div>
+          </div>
+          {/* Accent gradient line */}
+          <div className="h-[2px] bg-gradient-to-r from-emerald-500/80 via-brand/40 to-transparent" />
         </header>
 
-        {/* Scrollable Content with Strict Global Layout Enforcement */}
+        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto">
-          <div className={`p-4 md:p-8 mx-auto w-full max-w-5xl flex flex-col min-h-full`}>
+          <div className="p-4 md:p-8 mx-auto w-full max-w-5xl flex flex-col min-h-full">
             
             {/* Global Page Header */}
             <header className="mb-6 md:mb-8 space-y-4">
@@ -135,7 +161,7 @@ export default function SidebarLayout({
               )}
             </header>
 
-            {/* Page Specific Content */}
+            {/* Page Content */}
             {children}
           </div>
         </div>
@@ -143,9 +169,9 @@ export default function SidebarLayout({
         {/* Overlay when drawer is open */}
         {menuOpen && (
           <div 
-            className="fixed inset-0 bg-gray-900/20 backdrop-blur-sm z-40 transition-opacity"
+            className="fixed inset-0 bg-gray-900/30 backdrop-blur-sm z-40 transition-opacity"
             onClick={() => setMenuOpen(false)}
-          ></div>
+          />
         )}
       </main>
     </div>

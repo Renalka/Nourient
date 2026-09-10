@@ -17,7 +17,7 @@ DETECTIVE_URL = "http://127.0.0.1:8004/api/v1/detective/analyze"
 BIOCONTEXT_URL = "http://127.0.0.1:8005/api/v1/biocontext/evaluate"
 
 from fastapi import Form, Depends
-from typing import Optional
+from typing import Optional, Dict, Any
 from core.security import get_optional_user_id
 
 @router.post("/scanner")
@@ -273,4 +273,53 @@ async def process_claims_scanner(front_file: UploadFile = File(...), back_file: 
             
     except Exception as e:
         logger.error(f"Claims Scanner Orchestration error: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/evaluate-alternative")
+async def evaluate_alternative(payload: Dict[str, Any]):
+    """
+    Evaluates an Alternative product (from Open Food Facts) using the custom ML model.
+    Passes the ingredients to Detective for decoding, then to Scoring.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            ingredients_text = payload.get("ingredients_text", "")
+            
+            # 1. Format for Detective (expects a list of dicts with 'name')
+            raw_ingredients = []
+            if ingredients_text:
+                # Rough split by comma for OFF ingredients
+                parts = [p.strip() for p in ingredients_text.split(",") if p.strip()]
+                raw_ingredients = [{"name": p} for p in parts]
+                
+            # 2. Call Detective
+            ENHANCED_DETECTIVE_URL = "http://127.0.0.1:8004/api/v1/detective/enhanced_analyze"
+            detective_res = await client.post(ENHANCED_DETECTIVE_URL, json={"ingredients": raw_ingredients}, timeout=30.0)
+            detective_data = detective_res.json() if detective_res.status_code == 200 else None
+            
+            # 3. Format for Scoring
+            # Scoring expects extracted_data (with nutrition and ingredients) and detective_data
+            extracted_data = {
+                "nutrition": payload.get("nutrition", {}),
+                "ingredients": raw_ingredients,
+                "name": payload.get("name", "Unknown Alternative")
+            }
+            
+            scoring_payload = {
+                "extracted_data": extracted_data,
+                "detective_data": detective_data
+            }
+            
+            SCORING_URL = "http://127.0.0.1:8002/api/v1/scoring/evaluate"
+            score_res = await client.post(SCORING_URL, json=scoring_payload, timeout=30.0)
+            score_data = score_res.json() if score_res.status_code == 200 else None
+            
+            return {
+                "extracted_data": extracted_data,
+                "score": score_data,
+                "detective": detective_data
+            }
+            
+    except Exception as e:
+        logger.error(f"Alternative Evaluation error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -25,6 +25,13 @@ export default function AlternativesPage() {
   const [alternatives, setAlternatives] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [lastQuery, setLastQuery] = useState<any>({});
+  const [addingToBasket, setAddingToBasket] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleSearch = async () => {
     setLoading(true);
@@ -64,6 +71,61 @@ export default function AlternativesPage() {
     }
   };
 
+  const handleAddToBasket = async (alt: any) => {
+    setAddingToBasket(prev => ({ ...prev, [alt.product_id]: true }));
+    try {
+      const token = await getToken();
+      
+      // 1. Evaluate Alternative using the Orchestrator Pipeline
+      const evalPayload = {
+        name: alt.name,
+        ingredients_text: alt.ingredients_text,
+        nutrition: {
+          calories: { amount: alt.energy_kcal_100g || 0 },
+          sugar: { amount: alt.sugar_g || 0 },
+          sodium: { amount: (alt.sodium_g || 0) * 1000 }, // mg
+          saturated_fat: { amount: alt.sat_fat_g || 0 },
+          protein: { amount: alt.protein_g || 0 },
+          fiber: { amount: alt.fiber_g || 0 }
+        }
+      };
+      
+      const evalRes = await fetch('http://localhost:8003/api/v1/orchestrate/evaluate-alternative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(evalPayload),
+      });
+      
+      if (!evalRes.ok) throw new Error("Evaluation failed");
+      const evalData = await evalRes.json();
+      
+      // 2. Add to Basket
+      const basketPayload = {
+         product_data: {
+             ...evalData.extracted_data,
+             score: evalData.score,
+             source: "off_alternative" // Identifies it as a discovered alternative
+         }
+      };
+      
+      const basketRes = await fetch('http://localhost:8007/api/v1/basket/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(basketPayload),
+      });
+      
+      if (!basketRes.ok) throw new Error("Basket add failed");
+      
+      showToast("Added to Basket!", "success");
+      
+    } catch (err: any) {
+      console.error(err);
+      showToast("Failed to add to basket", "error");
+    } finally {
+      setAddingToBasket(prev => ({ ...prev, [alt.product_id]: false }));
+    }
+  };
+
   const getGradeColor = (grade: string) => {
     switch(grade?.toLowerCase()) {
       case 'a': return 'bg-green-100 text-green-800 border-green-200';
@@ -80,6 +142,21 @@ export default function AlternativesPage() {
       pageTitle="Better Alternatives"
       pageSubtitle="Discover Healthier Options"
     >
+      {toast && (
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in flex items-center justify-center">
+          <div className={`px-6 py-3 rounded-full shadow-2xl text-sm font-bold tracking-wide uppercase flex items-center gap-3 ${
+            toast.type === 'success' ? 'bg-black text-white' : 'bg-red-600 text-white'
+          }`}>
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            ) : (
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            )}
+            {toast.message}
+          </div>
+        </div>
+      )}
+      
       <div className={`transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
           
@@ -286,13 +363,28 @@ export default function AlternativesPage() {
                         ))}
                       </div>
                       
-                      <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold flex flex-wrap gap-x-5 gap-y-2 mt-auto border-t border-gray-50 pt-4">
-                        {lastQuery.current_sugar !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sug: <span className="text-gray-900">{alt.sugar_g != null ? alt.sugar_g + 'g' : '--'}</span></span>}
-                        {lastQuery.current_protein !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Pro: <span className="text-gray-900">{alt.protein_g != null ? alt.protein_g + 'g' : '--'}</span></span>}
-                        {lastQuery.current_fat !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Fat: <span className="text-gray-900">{alt.fat_g != null ? alt.fat_g + 'g' : '--'}</span></span>}
-                        {lastQuery.current_saturated_fat !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sat Fat: <span className="text-gray-900">{alt.sat_fat_g != null ? alt.sat_fat_g + 'g' : '--'}</span></span>}
-                        {lastQuery.current_fiber !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Fiber: <span className="text-gray-900">{alt.fiber_g != null ? alt.fiber_g + 'g' : '--'}</span></span>}
-                        {lastQuery.current_sodium !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sod: <span className="text-gray-900">{alt.sodium_g != null ? alt.sodium_g + 'g' : '--'}</span></span>}
+                      <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold flex flex-wrap gap-x-5 gap-y-2 mt-auto border-t border-gray-50 pt-4 items-center justify-between">
+                        <div className="flex flex-wrap gap-x-5 gap-y-2">
+                          {lastQuery.current_sugar !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sug: <span className="text-gray-900">{alt.sugar_g != null ? alt.sugar_g + 'g' : '--'}</span></span>}
+                          {lastQuery.current_protein !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Pro: <span className="text-gray-900">{alt.protein_g != null ? alt.protein_g + 'g' : '--'}</span></span>}
+                          {lastQuery.current_fat !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Fat: <span className="text-gray-900">{alt.fat_g != null ? alt.fat_g + 'g' : '--'}</span></span>}
+                          {lastQuery.current_saturated_fat !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sat Fat: <span className="text-gray-900">{alt.sat_fat_g != null ? alt.sat_fat_g + 'g' : '--'}</span></span>}
+                          {lastQuery.current_fiber !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Fiber: <span className="text-gray-900">{alt.fiber_g != null ? alt.fiber_g + 'g' : '--'}</span></span>}
+                          {lastQuery.current_sodium !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sod: <span className="text-gray-900">{alt.sodium_g != null ? alt.sodium_g + 'g' : '--'}</span></span>}
+                        </div>
+                        
+                        <button 
+                          onClick={() => handleAddToBasket(alt)}
+                          disabled={addingToBasket[alt.product_id]}
+                          className="shrink-0 flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 shadow-sm"
+                        >
+                          {addingToBasket[alt.product_id] ? (
+                            <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                          )}
+                          <span>Basket</span>
+                        </button>
                       </div>
                     </div>
                   </div>
