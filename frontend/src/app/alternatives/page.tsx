@@ -9,29 +9,42 @@ export default function AlternativesPage() {
   
   // Minimal manual input for demo purposes
   const [category, setCategory] = useState('Snack');
-  const [sugar, setSugar] = useState(15.0);
-  const [protein, setProtein] = useState(2.0);
+  const [sugar, setSugar] = useState<number | ''>(15.0);
+  const [protein, setProtein] = useState<number | ''>(2.0);
+  const [fat, setFat] = useState<number | ''>('');
+  const [satFat, setSatFat] = useState<number | ''>('');
+  const [fiber, setFiber] = useState<number | ''>('');
+  const [sodium, setSodium] = useState<number | ''>('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [alternatives, setAlternatives] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [lastQuery, setLastQuery] = useState<any>({});
 
   const handleSearch = async () => {
     setLoading(true);
     setError(null);
     setAlternatives([]);
     setHasSearched(true);
+    
+    const queryPayload = {
+      category: category,
+      current_sugar: sugar === '' ? null : sugar,
+      current_protein: protein === '' ? null : protein,
+      current_fat: fat === '' ? null : fat,
+      current_saturated_fat: satFat === '' ? null : satFat,
+      current_fiber: fiber === '' ? null : fiber,
+      current_sodium: sodium === '' ? null : sodium
+    };
+    
+    setLastQuery(queryPayload);
 
     try {
       const response = await fetch('http://localhost:8006/api/v1/alternatives/find', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: category,
-          current_sugar: sugar,
-          current_protein: protein
-        }),
+        body: JSON.stringify(queryPayload),
       });
 
       if (!response.ok) {
@@ -75,8 +88,9 @@ export default function AlternativesPage() {
               <input 
                 type="number" 
                 value={sugar} 
-                onChange={e => setSugar(Number(e.target.value))}
+                onChange={e => setSugar(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full border border-black p-2 text-sm"
+                placeholder="Optional"
               />
             </div>
 
@@ -85,8 +99,54 @@ export default function AlternativesPage() {
               <input 
                 type="number" 
                 value={protein} 
-                onChange={e => setProtein(Number(e.target.value))}
+                onChange={e => setProtein(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full border border-black p-2 text-sm"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Fat (per 100g/ml)</label>
+              <input 
+                type="number" 
+                value={fat} 
+                onChange={e => setFat(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full border border-black p-2 text-sm"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Saturated Fat (per 100g/ml)</label>
+              <input 
+                type="number" 
+                value={satFat} 
+                onChange={e => setSatFat(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full border border-black p-2 text-sm"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Fiber (per 100g/ml)</label>
+              <input 
+                type="number" 
+                value={fiber} 
+                onChange={e => setFiber(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full border border-black p-2 text-sm"
+                placeholder="Optional"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Sodium (per 100g/ml)</label>
+              <input 
+                type="number" 
+                step="0.01"
+                value={sodium} 
+                onChange={e => setSodium(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-full border border-black p-2 text-sm"
+                placeholder="Optional"
               />
             </div>
 
@@ -95,7 +155,7 @@ export default function AlternativesPage() {
               disabled={loading}
               className="w-full mt-4 px-4 py-3 bg-black text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Searching DB...' : 'Find Better Options'}
+              {loading ? 'Searching...' : 'Find Better Options'}
             </button>
             
             {error && <div className="text-xs text-red-500 font-bold uppercase mt-2">{error}</div>}
@@ -120,14 +180,19 @@ export default function AlternativesPage() {
             <div className="grid gap-4">
               {alternatives.map((alt, idx) => (
                 <div key={alt.product_id} className="border border-black flex flex-col md:flex-row">
-                  <div className="bg-black text-white p-6 flex flex-col justify-center items-center w-full md:w-32">
-                    <span className="text-3xl font-bold">{alt.overall_score}</span>
-                    <span className="text-[10px] uppercase tracking-widest">Score</span>
+                  <div className="bg-black text-white p-6 flex flex-col justify-center items-center w-full md:w-32 shrink-0">
+                    <span className="text-3xl font-bold">{alt.betterment_score}</span>
+                    <span className="text-[10px] uppercase tracking-widest text-center mt-1">Match<br/>Score</span>
                   </div>
                   
                   <div className="p-6 flex-grow flex flex-col justify-between">
                     <div>
-                      <h3 className="text-xl font-bold tracking-tighter uppercase">{alt.name}</h3>
+                      <div className="flex justify-between items-start gap-4">
+                        <h3 className="text-xl font-bold tracking-tighter uppercase">{alt.name}</h3>
+                        <span className="text-xs font-bold px-2 py-1 bg-gray-200 text-black uppercase tracking-wider shrink-0">
+                          Nutri-Score {alt.nutriscore_grade}
+                        </span>
+                      </div>
                       <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">{alt.brand}</p>
                     </div>
                     
@@ -138,8 +203,13 @@ export default function AlternativesPage() {
                         </span>
                       ))}
                     </div>
-                    <div className="text-xs text-gray-400 uppercase tracking-widest font-bold">
-                      Sugar: {alt.sugar_g}g / 100g &nbsp;&bull;&nbsp; Protein: {alt.protein_g}g / 100g
+                    <div className="text-xs text-gray-400 uppercase tracking-widest font-bold flex flex-wrap gap-x-4 gap-y-1 mt-2 border-t border-gray-100 pt-3">
+                      {lastQuery.current_sugar !== null && <span>Sug: {alt.sugar_g != null ? alt.sugar_g + 'g' : '--'}</span>}
+                      {lastQuery.current_protein !== null && <span>Pro: {alt.protein_g != null ? alt.protein_g + 'g' : '--'}</span>}
+                      {lastQuery.current_fat !== null && <span>Fat: {alt.fat_g != null ? alt.fat_g + 'g' : '--'}</span>}
+                      {lastQuery.current_saturated_fat !== null && <span>Sat Fat: {alt.sat_fat_g != null ? alt.sat_fat_g + 'g' : '--'}</span>}
+                      {lastQuery.current_fiber !== null && <span>Fiber: {alt.fiber_g != null ? alt.fiber_g + 'g' : '--'}</span>}
+                      {lastQuery.current_sodium !== null && <span>Sodium: {alt.sodium_g != null ? alt.sodium_g + 'g' : '--'}</span>}
                     </div>
                   </div>
                 </div>

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 import logging
 from pydantic import BaseModel
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from services.alternatives.core.engine import AlternativesEngine
 
 logger = logging.getLogger(__name__)
@@ -11,8 +11,12 @@ engine = AlternativesEngine()
 
 class AlternativeRequest(BaseModel):
     category: str
-    current_sugar: float = 0.0
-    current_protein: float = 0.0
+    current_sugar: Optional[float] = None
+    current_protein: Optional[float] = None
+    current_fat: Optional[float] = None
+    current_saturated_fat: Optional[float] = None
+    current_fiber: Optional[float] = None
+    current_sodium: Optional[float] = None
 
 @router.post("/find")
 async def find_alternatives(payload: AlternativeRequest):
@@ -21,7 +25,11 @@ async def find_alternatives(payload: AlternativeRequest):
         results = engine.find_better_alternatives(
             payload.category,
             payload.current_sugar,
-            payload.current_protein
+            payload.current_protein,
+            payload.current_fat,
+            payload.current_saturated_fat,
+            payload.current_fiber,
+            payload.current_sodium
         )
         return {"alternatives": results}
     except Exception as e:
