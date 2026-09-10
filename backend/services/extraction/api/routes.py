@@ -121,7 +121,7 @@ Return strictly in the following JSON format:
   "health_halo": {
     "visual_cues": ["list of visual tricks, e.g. rustic fonts, green leaves, earthy tones"],
     "deception_index": 85,
-    "reasoning": "Explanation of how the visual vibe contrasts with the likely reality of the product"
+    "reasoning": "Calculate the deception_index strictly using this rubric (Start at 0, max 100):\n+30 if packaging uses predominantly green/earthy tones but product is processed.\n+25 for imagery of whole fresh fruits/farms when product only contains extracts/flavorings.\n+20 for prominent 'buzzwords' (e.g., Natural, Pure, Simple) used as marketing.\n+15 for rustic fonts or brown paper textures mimicking 'craft' or 'organic' aesthetics.\n+10 for minimizing or hiding the actual product type text in favor of large lifestyle branding."
   },
   "target_audience": {
     "demographic": "e.g. Children, Athletes, Health-conscious adults",

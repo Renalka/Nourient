@@ -32,7 +32,7 @@ class GeminiEngine(IAIEngine):
         # Enforcing JSON format for modern models
         generation_config = genai.GenerationConfig(
             response_mime_type="application/json",
-            temperature=0.1
+            temperature=0.0
         )
         
         # Add a retry loop for 504 timeouts

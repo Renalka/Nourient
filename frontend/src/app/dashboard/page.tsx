@@ -9,10 +9,13 @@ export default function DashboardPage() {
   const displayName = user?.email?.split('@')[0] || "Guest";
 
   const [recentScans, setRecentScans] = React.useState<any[]>([]);
+  const [totalScans, setTotalScans] = React.useState(0);
   const [healthProfile, setHealthProfile] = React.useState("GENERAL");
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+  const [editingScanId, setEditingScanId] = React.useState<number | null>(null);
+  const [editNameValue, setEditNameValue] = React.useState("");
 
   React.useEffect(() => {
     if (!loading && !user) {
@@ -24,11 +27,17 @@ export default function DashboardPage() {
     if (loading || !user) return;
     try {
       const scanKey = `recentScans_${user.uid}`;
+      const totalKey = `totalScans_${user.uid}`;
+      
       const historyStr = localStorage.getItem(scanKey);
       if (historyStr) {
         try {
           const parsed = JSON.parse(historyStr);
-          setRecentScans(Array.isArray(parsed) ? parsed.filter(Boolean) : []);
+          const scansArray = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+          setRecentScans(scansArray);
+          
+          const storedTotal = parseInt(localStorage.getItem(totalKey) || '0', 10);
+          setTotalScans(Math.max(storedTotal, scansArray.length));
         } catch(e) { setRecentScans([]); }
       }
       else setRecentScans([]);
@@ -67,16 +76,30 @@ export default function DashboardPage() {
     return "Good evening";
   };
 
-  const avgScore = recentScans.length > 0
-    ? Math.round(recentScans.reduce((a, s) => a + (s?.score || 0), 0) / recentScans.length) : 72;
-  const avgProcessing = recentScans.length > 0
-    ? Math.round(recentScans.reduce((a, s) => a + (s?.processing_score || 0), 0) / recentScans.length) : 45;
-  const cleanCount = recentScans.filter(s => (s?.score || 0) >= 70).length;
+  const ingredientScans = recentScans.filter(s => !s.scanMode || s.scanMode === 'ingredients' || s.scanMode === 'enhanced');
+
+  const avgScore = ingredientScans.length > 0
+    ? Math.round(ingredientScans.reduce((a, s) => a + (s?.metabolic_fit_score ?? s?.score ?? 0), 0) / ingredientScans.length) : 0;
+  const avgProcessing = ingredientScans.length > 0
+    ? Math.round(ingredientScans.reduce((a, s) => a + (s?.processing_score || 0), 0) / ingredientScans.length) : 0;
+  const cleanCount = ingredientScans.filter(s => (s?.score || 0) >= 70).length;
   const scoreOffset = 283 - (283 * avgScore) / 100;
 
   const goalLabel = healthProfile === 'DIABETIC' ? 'Low Sugar · Glycemic Control'
     : healthProfile === 'HYPERTENSION' ? 'Low Sodium · Heart Health'
     : 'Balanced Diet · Optimal Health';
+
+  const handleSaveScanName = (id: number) => {
+    setEditingScanId(null);
+    const updatedName = editNameValue.trim();
+    if (!updatedName) return;
+
+    const updatedScans = recentScans.map(s => s.id === id ? { ...s, name: updatedName } : s);
+    setRecentScans(updatedScans);
+    if (user) {
+        localStorage.setItem(`recentScans_${user.uid}`, JSON.stringify(updatedScans));
+    }
+  };
 
   if (loading || !user) return null;
 
@@ -108,7 +131,7 @@ export default function DashboardPage() {
             {/* Left: score ring + greeting */}
             <div className="lg:col-span-2 p-8 md:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 backdrop-blur-sm">
               <div>
-                <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-4 drop-shadow-md">Your Health Score</p>
+                <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-4 drop-shadow-md">Metabolic Fit Score</p>
                 <div className="flex items-center gap-6">
                   <div className="relative w-28 h-28 shrink-0">
                     <svg className="w-full h-full transform -rotate-90 drop-shadow-xl" viewBox="0 0 100 100">
@@ -128,14 +151,14 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-white font-bold text-lg mb-1 drop-shadow-md">Overall</p>
-                    <p className="text-gray-300 text-xs leading-relaxed drop-shadow-sm">Across {recentScans.length || 0} scanned products</p>
+                    <p className="text-white font-bold text-lg mb-1 drop-shadow-md">Tailored Match</p>
+                    <p className="text-gray-300 text-xs leading-relaxed drop-shadow-sm">Personalized BioContext across {recentScans.length || 0} scanned products</p>
                   </div>
                 </div>
               </div>
               <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
                 <div>
-                  <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1 drop-shadow-sm">Active Goal</p>
+                  <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-1 drop-shadow-sm">Active BioContext Profile</p>
                   <p className="text-white text-sm font-medium drop-shadow-md">{goalLabel}</p>
                 </div>
                 <button
@@ -151,12 +174,12 @@ export default function DashboardPage() {
             {/* Right: stats grid */}
             <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/10 backdrop-blur-[2px]">
               {[
-                { value: String(recentScans.length), label: 'Products Scanned' },
-                { value: String(avgScore), label: 'Avg Nutri-Score' },
+                { value: String(totalScans), label: 'Products Scanned' },
+                { value: String(avgScore), label: 'Avg Metabolic Fit' },
                 { value: String(avgProcessing), label: 'Avg NOVA Score' },
                 { value: String(cleanCount), label: 'Clean Products' },
-                { value: healthProfile === 'DIABETIC' ? '95' : '39', label: 'Sugar Limit %' },
-                { value: healthProfile === 'GENERAL' ? '65' : '42', label: 'Protein Adequacy %' },
+                { value: String(ingredientScans.reduce((count, s) => count + (s.ingredients?.filter((i: any) => i.risk_level?.toLowerCase() === 'high risk' || i.risk_level?.toLowerCase() === 'high').length || 0), 0)), label: 'Red-Flag Additives' },
+                { value: ingredientScans.length > 0 ? `${Math.round((ingredientScans.filter(s => s.processing_score < 40).length / ingredientScans.length) * 100)}%` : '0%', label: 'Ultra-Processed (UPF)' },
               ].map((s, i) => (
                 <div
                   key={i}
@@ -258,7 +281,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center mb-5 relative z-10">
             <div>
               <p className="text-[10px] font-bold tracking-[0.25em] text-gray-400 uppercase mb-1">Recent Scans</p>
-              <p className="text-sm text-gray-500">{recentScans.length > 0 ? `${recentScans.length} product${recentScans.length > 1 ? 's' : ''} analyzed` : 'No products scanned yet'}</p>
+              <p className="text-sm text-gray-500">{totalScans > 0 ? `${totalScans} product${totalScans > 1 ? 's' : ''} analyzed` : 'No products scanned yet'}</p>
             </div>
             {recentScans.length > 0 && (
               <Link href="/scanner" className="group flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 text-sm font-bold text-gray-900 hover:border-gray-300 hover:shadow-sm transition-all">
@@ -284,7 +307,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden divide-y divide-gray-100 shadow-sm">
-              {recentScans.map((scan, i) => {
+              {recentScans.slice(0, 5).map((scan, i) => {
                 if (!scan) return null;
                 return (
                 <div
@@ -297,10 +320,36 @@ export default function DashboardPage() {
                   {/* Subtle left border highlight on hover */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-brand scale-y-0 group-hover:scale-y-100 origin-center transition-transform duration-300" />
                   
-                  <div className="flex-1 min-w-0 z-10">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-brand transition-colors">{scan.name}</h4>
-                      <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shrink-0 shadow-sm">
+                  <div className="flex-1 min-w-0 z-10 pr-6">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-3 min-w-0 group/edit">
+                        {editingScanId === scan.id ? (
+                          <input 
+                             autoFocus
+                             value={editNameValue}
+                             onChange={(e) => setEditNameValue(e.target.value)}
+                             onBlur={() => handleSaveScanName(scan.id)}
+                             onKeyDown={(e) => e.key === 'Enter' && handleSaveScanName(scan.id)}
+                             className="text-sm font-bold text-gray-900 border-b border-brand focus:outline-none bg-transparent w-full"
+                          />
+                        ) : (
+                          <>
+                            <h4 className="text-sm font-bold text-gray-900 truncate group-hover:text-brand transition-colors">{scan.name}</h4>
+                            <button 
+                               onClick={(e) => { 
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 setEditingScanId(scan.id); 
+                                 setEditNameValue(scan.name); 
+                               }} 
+                               className="text-gray-300 hover:text-brand transition-colors opacity-0 group-hover/edit:opacity-100 shrink-0"
+                            >
+                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shrink-0 shadow-sm ml-4">
                         {new Date(scan.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                       </span>
                     </div>
@@ -308,23 +357,35 @@ export default function DashboardPage() {
                       {scan.ingredients?.length > 0 ? scan.ingredients.map((ing: any) => ing?.name || '').filter(Boolean).join(', ') : 'No ingredients detected'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-5 shrink-0 z-10">
-                    <div className="text-center">
-                      <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">Nutri</p>
-                      <span className={`text-lg font-serif font-bold ${scan.score >= 75 ? 'text-green-600' : scan.score >= 45 ? 'text-yellow-600' : 'text-red-600'}`}>{scan.score}</span>
-                    </div>
-                    {scan.processing_score !== undefined && (
+                  <div className="flex items-center justify-end gap-3 shrink-0 z-10 min-w-[140px]">
+                    {scan.score === -1 && scan.processing_score === -1 ? (
+                      <div className="text-center w-full">
+                         <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">{scan.scanMode === 'claims' ? 'Claims Check' : scan.scanMode === 'front' ? 'Front Label' : 'Nutrition Facts'}</span>
+                      </div>
+                    ) : (
                       <>
-                        <div className="w-px h-8 bg-gray-200 group-hover:bg-gray-300 transition-colors" />
-                        <div className="text-center">
-                          <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">AI</p>
-                          <span className={`text-lg font-serif font-bold ${scan.processing_score >= 80 ? 'text-brand' : scan.processing_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{scan.processing_score}</span>
-                        </div>
+                        {scan.score !== -1 && (
+                          <div className="text-center w-12">
+                            <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">{scan.primaryLabel || 'Nutri'}</p>
+                            <span className={`text-lg font-serif font-bold ${
+                              (scan.primaryLabel === 'Decept' && scan.score > 50) ? 'text-red-600' :
+                              (scan.primaryLabel === 'Decept' && scan.score <= 50) ? 'text-green-600' :
+                              scan.score >= 75 ? 'text-green-600' : 
+                              scan.score >= 45 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>{scan.score}</span>
+                          </div>
+                        )}
+                        {scan.processing_score !== undefined && scan.processing_score !== -1 && (
+                          <>
+                            {scan.score !== -1 && <div className="w-px h-8 bg-gray-200 group-hover:bg-gray-300 transition-colors" />}
+                            <div className="text-center w-12">
+                              <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5">{scan.secondaryLabel || 'AI'}</p>
+                              <span className={`text-lg font-serif font-bold ${scan.processing_score >= 80 ? 'text-brand' : scan.processing_score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>{scan.processing_score}</span>
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
-                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100 group-hover:bg-white group-hover:border-gray-200 transition-colors ml-2 shadow-sm group-hover:shadow">
-                      <svg className="w-4 h-4 text-gray-400 group-hover:text-brand group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                    </div>
                   </div>
                 </div>
               );})}

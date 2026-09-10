@@ -35,6 +35,8 @@ export default function ScannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [addingToBasket, setAddingToBasket] = useState(false);
   const [basketMsg, setBasketMsg] = useState("");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
 
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const uploadInputRef2 = useRef<HTMLInputElement>(null);
@@ -239,6 +241,35 @@ export default function ScannerPage() {
     setError(null);
   };
 
+  const handleNameSave = () => {
+    setIsEditingName(false);
+    const updatedName = editNameValue.trim();
+    if (!updatedName) return;
+
+    // Update local state
+    const updatedResult = { ...result };
+    if (updatedResult.extracted_data) {
+        updatedResult.extracted_data.name = updatedName;
+    } else {
+        updatedResult.name = updatedName;
+    }
+    setResult(updatedResult);
+
+    // Update localStorage history
+    if (user) {
+        const scanKey = `recentScans_${user.uid}`;
+        const historyStr = localStorage.getItem(scanKey);
+        if (historyStr) {
+            const history = JSON.parse(historyStr);
+            if (history.length > 0) {
+                // The first item is usually the current scan
+                history[0].name = updatedName;
+                localStorage.setItem(scanKey, JSON.stringify(history));
+            }
+        }
+    }
+  };
+
   const processImage = async (isEnhanced = false) => {
     if (!file) return;
     if (scanMode === 'claims' && !file2) {
@@ -303,24 +334,73 @@ export default function ScannerPage() {
         throw new Error(data.extracted_data.error_message || "Could not read the image.");
       }
 
+      // Option 4: Smart Fallback Naming using top ingredient
+      let finalName = data.extracted_data?.name || data.name || '';
+      const extractedIngredients = data.extracted_data?.ingredients || [];
+      if ((!finalName || finalName.trim() === '') && extractedIngredients.length > 0) {
+        const firstIng = extractedIngredients[0].name || '';
+        if (firstIng) {
+          const capitalized = firstIng.charAt(0).toUpperCase() + firstIng.slice(1).toLowerCase();
+          finalName = `${capitalized}-based Product`;
+          if (data.extracted_data && !data.extracted_data.name) {
+             data.extracted_data.name = finalName;
+          } else if (!data.name) {
+             data.name = finalName;
+          }
+        }
+      }
+
       setResult(data);
       
       // Save to recent scans history (max 5)
       if (user) {
         try {
           const scanKey = `recentScans_${user.uid}`;
+          const totalKey = `totalScans_${user.uid}`;
+          
           const historyStr = localStorage.getItem(scanKey);
           let history = historyStr ? JSON.parse(historyStr) : [];
+          
+          let currentTotal = parseInt(localStorage.getItem(totalKey) || '0', 10);
+          if (currentTotal === 0 && history.length > 0) {
+             currentTotal = history.length;
+          }
+          localStorage.setItem(totalKey, (currentTotal + 1).toString());
+          let primaryScore = 0;
+          let secondaryScore = 0;
+          let primaryLabel = 'Nutri';
+          let secondaryLabel = 'AI';
+          
+          if (scanMode === 'claims') {
+             primaryScore = data.verification?.overall_trust_score ?? 0;
+             primaryLabel = 'Trust';
+             secondaryScore = -1; 
+          } else if (scanMode === 'front') {
+             primaryScore = data.health_halo?.deception_index ?? 0;
+             primaryLabel = 'Decept';
+             secondaryScore = -1;
+          } else if (scanMode === 'nutrition') {
+             primaryScore = -1;
+             secondaryScore = -1;
+          } else {
+             primaryScore = data.score?.nutritional_quality_score ?? 0;
+             secondaryScore = data.score?.processing_score ?? 0;
+          }
+
           const newScan = {
             id: Date.now(),
-            name: data.extracted_data?.name || "Unnamed Product",
-            score: data.score?.nutritional_quality_score || 0,
-            processing_score: data.score?.processing_score || 0,
+            name: data.extracted_data?.name || data.name || (scanMode === 'claims' ? 'Claims Check' : scanMode === 'front' ? 'Front Label' : scanMode === 'nutrition' ? 'Nutrition Facts' : 'Unnamed Product'),
+            scanMode: scanMode,
+            score: primaryScore,
+            processing_score: secondaryScore,
+            metabolic_fit_score: data.biocontext?.metabolic_fit_score ?? data.score?.nutritional_quality_score ?? 0,
+            primaryLabel: primaryLabel,
+            secondaryLabel: secondaryLabel,
             ingredients: data.extracted_data?.ingredients || [],
             timestamp: new Date().toISOString()
           };
           history.unshift(newScan);
-          history = history.slice(0, 5); // Keep only last 5
+          history = history.slice(0, 100); // Keep last 100 for accurate lifetime averages
           localStorage.setItem(scanKey, JSON.stringify(history));
         } catch (e) {
           console.error("Failed to save history", e);
@@ -636,8 +716,34 @@ export default function ScannerPage() {
                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                        <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
                          <div className="text-white">
-                           <h1 className="text-3xl font-serif mb-1 drop-shadow-md">Nutrition Panel Analysis</h1>
-                           <p className="text-sm text-white/90 font-medium drop-shadow-sm">Portion Loopholes • Macro Quality</p>
+                           {isEditingName ? (
+                             <div className="flex items-center gap-2 mb-1">
+                               <input 
+                                 autoFocus
+                                 className="text-3xl font-serif bg-transparent border-b border-white/50 focus:border-white outline-none text-white placeholder-white/50 w-full"
+                                 value={editNameValue}
+                                 onChange={(e) => setEditNameValue(e.target.value)}
+                                 onBlur={handleNameSave}
+                                 onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                               />
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-2 mb-1 group/edit">
+                               <h1 className="text-3xl font-serif drop-shadow-md truncate max-w-[300px] md:max-w-[500px]">
+                                 {result.extracted_data?.name || result.name || 'Unknown Product'}
+                               </h1>
+                               <button 
+                                 onClick={() => {
+                                   setEditNameValue(result.extracted_data?.name || result.name || '');
+                                   setIsEditingName(true);
+                                 }} 
+                                 className="opacity-0 group-hover/edit:opacity-100 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-all backdrop-blur-sm"
+                               >
+                                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                               </button>
+                             </div>
+                           )}
+                           <p className="text-sm text-white/90 font-medium drop-shadow-sm">Nutrition Panel Analysis • Portion Loopholes</p>
                          </div>
                        </div>
                      </div>
@@ -789,8 +895,34 @@ export default function ScannerPage() {
                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                        <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
                          <div className="text-white">
-                           <h1 className="text-3xl font-serif mb-1 drop-shadow-md">Claims Verifier</h1>
-                           <p className="text-sm text-white/90 font-medium drop-shadow-sm">Contradictions • Loopholes • Buzzwords</p>
+                           {isEditingName ? (
+                             <div className="flex items-center gap-2 mb-1">
+                               <input 
+                                 autoFocus
+                                 className="text-3xl font-serif bg-transparent border-b border-white/50 focus:border-white outline-none text-white placeholder-white/50 w-full"
+                                 value={editNameValue}
+                                 onChange={(e) => setEditNameValue(e.target.value)}
+                                 onBlur={handleNameSave}
+                                 onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                               />
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-2 mb-1 group/edit">
+                               <h1 className="text-3xl font-serif drop-shadow-md truncate max-w-[300px] md:max-w-[500px]">
+                                 {result.extracted_data?.name || result.name || 'Unknown Product'}
+                               </h1>
+                               <button 
+                                 onClick={() => {
+                                   setEditNameValue(result.extracted_data?.name || result.name || '');
+                                   setIsEditingName(true);
+                                 }} 
+                                 className="opacity-0 group-hover/edit:opacity-100 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-all backdrop-blur-sm"
+                               >
+                                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                               </button>
+                             </div>
+                           )}
+                           <p className="text-sm text-white/90 font-medium drop-shadow-sm">Claims Verifier • Contradictions & Loopholes</p>
                          </div>
                        </div>
                      </div>
@@ -938,7 +1070,33 @@ export default function ScannerPage() {
                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
                        <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
                          <div className="text-white">
-                           <h1 className="text-3xl font-serif mb-1 drop-shadow-md">Visual Packaging Analysis</h1>
+                           {isEditingName ? (
+                             <div className="flex items-center gap-2 mb-1">
+                               <input 
+                                 autoFocus
+                                 className="text-3xl font-serif bg-transparent border-b border-white/50 focus:border-white outline-none text-white placeholder-white/50 w-full"
+                                 value={editNameValue}
+                                 onChange={(e) => setEditNameValue(e.target.value)}
+                                 onBlur={handleNameSave}
+                                 onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                               />
+                             </div>
+                           ) : (
+                             <div className="flex items-center gap-2 mb-1 group/edit">
+                               <h1 className="text-3xl font-serif drop-shadow-md truncate max-w-[300px] md:max-w-[500px]">
+                                 {result.extracted_data?.name || result.name || 'Unknown Product'}
+                               </h1>
+                               <button 
+                                 onClick={() => {
+                                   setEditNameValue(result.extracted_data?.name || result.name || '');
+                                   setIsEditingName(true);
+                                 }} 
+                                 className="opacity-0 group-hover/edit:opacity-100 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-all backdrop-blur-sm"
+                               >
+                                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                               </button>
+                             </div>
+                           )}
                            <p className="text-sm text-white/90 font-medium drop-shadow-sm">Front of Pack • Marketing & Deception</p>
                          </div>
                        </div>
@@ -1079,7 +1237,33 @@ export default function ScannerPage() {
                    
                    <div className="absolute bottom-0 left-0 w-full p-6 flex justify-between items-end">
                      <div className="text-white">
-                       <h1 className="text-3xl font-serif mb-1 drop-shadow-md">{result.extracted_data?.name || 'Unnamed Product'}</h1>
+                       {isEditingName ? (
+                         <div className="flex items-center gap-2 mb-1">
+                           <input 
+                             autoFocus
+                             className="text-3xl font-serif bg-transparent border-b border-white/50 focus:border-white outline-none text-white placeholder-white/50 w-full"
+                             value={editNameValue}
+                             onChange={(e) => setEditNameValue(e.target.value)}
+                             onBlur={handleNameSave}
+                             onKeyDown={(e) => e.key === 'Enter' && handleNameSave()}
+                           />
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-2 mb-1 group/edit">
+                           <h1 className="text-3xl font-serif drop-shadow-md truncate max-w-[300px] md:max-w-[500px]">
+                             {result.extracted_data?.name || result.name || 'Unknown Product'}
+                           </h1>
+                           <button 
+                             onClick={() => {
+                               setEditNameValue(result.extracted_data?.name || result.name || '');
+                               setIsEditingName(true);
+                             }} 
+                             className="opacity-0 group-hover/edit:opacity-100 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-all backdrop-blur-sm"
+                           >
+                             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                           </button>
+                         </div>
+                       )}
                        <p className="text-sm text-white/90 font-medium drop-shadow-sm">{result.extracted_data?.brand || 'Unknown Brand'} • {result.extracted_data?.category || 'Uncategorized'}</p>
                      </div>
                      <div className="flex flex-col items-end">
