@@ -51,3 +51,4 @@ backend/data/
 backend/data/
 backend/data/
 dummy.json
+backend/gcp-credentials.json
