@@ -80,8 +80,6 @@ export default function DashboardPage() {
 
   const avgScore = ingredientScans.length > 0
     ? Math.round(ingredientScans.reduce((a, s) => a + (s?.metabolic_fit_score ?? s?.score ?? 0), 0) / ingredientScans.length) : 0;
-  const avgProcessing = ingredientScans.length > 0
-    ? Math.round(ingredientScans.reduce((a, s) => a + (s?.processing_score || 0), 0) / ingredientScans.length) : 0;
   const cleanCount = ingredientScans.filter(s => (s?.score || 0) >= 70).length;
   const scoreOffset = 283 - (283 * avgScore) / 100;
 
@@ -166,13 +164,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Right: stats grid */}
-            <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-3 divide-x divide-y divide-white/10 backdrop-blur-[2px]">
+            <div className="lg:col-span-3 grid grid-cols-2 lg:grid-cols-2 divide-x divide-y divide-white/10 backdrop-blur-[2px]">
               {[
                 { value: String(totalScans), label: 'Products Scanned' },
-                { value: String(avgScore), label: 'Avg Metabolic Fit' },
-                { value: String(avgProcessing), label: 'Avg NOVA Score' },
                 { value: String(cleanCount), label: 'Clean Products' },
-                { value: String(ingredientScans.reduce((count, s) => count + (s.ingredients?.filter((i: any) => i.risk_level?.toLowerCase() === 'high risk' || i.risk_level?.toLowerCase() === 'high').length || 0), 0)), label: 'Red-Flag Additives' },
+                { value: String(ingredientScans.reduce((count, s) => {
+                    const list = s.decoded_additives || s.ingredients || [];
+                    return count + list.filter((i: any) => i.risk_level?.toLowerCase() === 'high risk' || i.risk_level?.toLowerCase() === 'high').length;
+                }, 0)), label: 'Red-Flag Additives' },
                 { value: ingredientScans.length > 0 ? `${Math.round((ingredientScans.filter(s => s.processing_score < 40).length / ingredientScans.length) * 100)}%` : '0%', label: 'Ultra-Processed (UPF)' },
               ].map((s, i) => (
                 <div

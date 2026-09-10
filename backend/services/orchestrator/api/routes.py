@@ -310,8 +310,8 @@ async def evaluate_alternative(payload: Dict[str, Any]):
                 "detective_data": detective_data
             }
             
-            SCORING_URL = "http://127.0.0.1:8002/api/v1/scoring/evaluate"
-            score_res = await client.post(SCORING_URL, json=scoring_payload, timeout=30.0)
+            SCORING_ENDPOINT = "http://127.0.0.1:8001/api/v1/score/evaluate"
+            score_res = await client.post(SCORING_ENDPOINT, json=scoring_payload, timeout=30.0)
             score_data = score_res.json() if score_res.status_code == 200 else None
             
             return {

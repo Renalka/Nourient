@@ -35,12 +35,18 @@ export default function LandingPage() {
     <div className="bg-black font-sans overflow-x-hidden" ref={revealRef}>
 
       {/* ── NAV ──────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-0 right-0 z-50 px-6 md:px-12 py-4 flex justify-between items-center bg-black/80 backdrop-blur-md border-b border-white/5">
-        <Link href="/" className="flex items-center gap-3">
-          <img src="/icon.png" alt="Nourient" className="w-6 h-6 object-contain invert brightness-0" />
-          <span className="font-medium tracking-[0.2em] text-[12px] text-white uppercase">Nourient</span>
-        </Link>
-        <nav className="hidden lg:flex gap-8">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-white/5">
+        <div className="px-4 md:px-8 h-14 flex items-center justify-between">
+          
+          <div className="flex items-center gap-4 shrink-0">
+            {/* The hamburger is present on internal pages with a negative margin, so we match the exact DOM structure and spacing to perfectly overlap */}
+            <div className="lg:hidden w-9 h-9 -ml-2" /> 
+            <Link href="/" className="flex items-center gap-3">
+              <img src="/icon.png" alt="Nourient" className="w-6 h-6 object-contain invert brightness-0" />
+              <span className="font-medium tracking-[0.2em] text-[12px] text-white uppercase hidden md:inline">Nourient</span>
+            </Link>
+          </div>
+        <nav className="hidden lg:flex gap-8 flex-1 justify-center">
           {['How it works','Features','For everyone','Science'].map(l => (
             <Link key={l} href={`#${l.toLowerCase().replace(/ /g,'-')}`}>
               <span className="text-[13px] font-medium text-gray-400 hover:text-white transition-colors">{l}</span>
@@ -54,6 +60,7 @@ export default function LandingPage() {
               Get started
             </button>
           </Link>
+        </div>
         </div>
       </header>
 

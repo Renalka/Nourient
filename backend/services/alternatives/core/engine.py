@@ -113,11 +113,21 @@ class AlternativesEngine:
                 if not name:
                     continue
                     
-                # Strict taxonomy enforcement ONLY if not a fallback free-text search
-                if not is_fallback:
-                    cat_tags = p.get('categories_tags', [])
-                    if not any(off_tag == tag.lower() for tag in cat_tags):
-                        continue
+                # Strict taxonomy enforcement to prevent fallback free-text searches 
+                # from polluting results with wrong product types (e.g., food instead of beverage)
+                cat_tags = p.get('categories_tags', [])
+                
+                # Exclude the overly broad OFF tag that categorizes all plants as beverages
+                cat_tags = [t for t in cat_tags if t.lower() != 'en:plant-based-foods-and-beverages']
+                
+                # Check if it has the strict tag, or at least contains the category name in a meaningful tag
+                has_tag = any(off_tag == tag.lower() for tag in cat_tags)
+                if not has_tag and is_fallback:
+                    # On fallback, allow a slightly looser check but strictly avoid the broad plant tag
+                    has_tag = any(category_clean in tag.lower() for tag in cat_tags)
+                    
+                if not has_tag:
+                    continue
                     
                 nutriments = p.get('nutriments', {})
                 

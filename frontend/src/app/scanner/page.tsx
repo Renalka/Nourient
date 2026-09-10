@@ -397,6 +397,7 @@ export default function ScannerPage() {
             primaryLabel: primaryLabel,
             secondaryLabel: secondaryLabel,
             ingredients: data.extracted_data?.ingredients || [],
+            decoded_additives: data.detective?.decoded_additives || [],
             timestamp: new Date().toISOString()
           };
           history.unshift(newScan);
