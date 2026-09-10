@@ -66,14 +66,27 @@ class AlternativesEngine:
         
         results = []
         try:
-            response = requests.get(self.api_url, params=params, headers=self.headers, timeout=5)
+            import time
+            def fetch_with_retry(req_params, max_retries=3):
+                for attempt in range(max_retries):
+                    try:
+                        resp = requests.get(self.api_url, params=req_params, headers=self.headers, timeout=10)
+                        if resp.status_code == 200:
+                            return resp
+                    except Exception as e:
+                        logger.warning(f"Request attempt {attempt+1} failed: {e}")
+                    time.sleep(1.0 * (attempt + 1))
+                return requests.get(self.api_url, params=req_params, headers=self.headers, timeout=10)
+
+            response = fetch_with_retry(params)
+            
             if response.status_code != 200:
                 logger.warning(f"OFF API returned {response.status_code} for {category_clean}, falling back to free-text search.")
                 del params['tagtype_1']
                 del params['tag_contains_1']
                 del params['tag_1']
                 params['search_terms'] = category_clean
-                response = requests.get(self.api_url, params=params, headers=self.headers, timeout=5)
+                response = fetch_with_retry(params)
                 
             response.raise_for_status()
             data = response.json()
@@ -182,6 +195,19 @@ class AlternativesEngine:
                 })
 
             candidates.sort(key=lambda x: x["betterment_score"], reverse=True)
+            
+            # Normalize scores to 0-100 based on the top result
+            if candidates:
+                max_score = candidates[0]["betterment_score"]
+                if max_score > 0:
+                    for c in candidates:
+                        # Map to a 0-100 range, keeping a minimum floor so nothing is 0 if it matched
+                        normalized = int((c["betterment_score"] / max_score) * 100)
+                        c["betterment_score"] = max(1, normalized)
+                else:
+                    for c in candidates:
+                        c["betterment_score"] = 100
+
             results = candidates[:10]
             
         except Exception as e:

@@ -1,13 +1,17 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
 import SidebarLayout from '@/components/SidebarLayout';
 
 export default function AlternativesPage() {
   const { getToken } = useAuth();
+  const [mounted, setMounted] = useState(false);
   
-  // Minimal manual input for demo purposes
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
   const [category, setCategory] = useState('Snack');
   const [sugar, setSugar] = useState<number | ''>(15.0);
   const [protein, setProtein] = useState<number | ''>(2.0);
@@ -60,171 +64,240 @@ export default function AlternativesPage() {
     }
   };
 
+  const getGradeColor = (grade: string) => {
+    switch(grade?.toLowerCase()) {
+      case 'a': return 'bg-green-100 text-green-800 border-green-200';
+      case 'b': return 'bg-lime-100 text-lime-800 border-lime-200';
+      case 'c': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'd': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'e': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   return (
     <SidebarLayout
       pageTitle="Better Alternatives"
       pageSubtitle="Discover Healthier Options"
     >
-      <div className="space-y-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <section className="md:col-span-1 border border-black p-6 space-y-4 h-fit">
-            <h2 className="text-lg font-serif border-b border-gray-200 pb-2 mb-4">Current Product</h2>
-            
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Category</label>
-              <select 
-                value={category} 
-                onChange={e => setCategory(e.target.value)}
-                className="w-full border border-black p-2 text-sm font-bold uppercase"
-              >
-                <option value="Snack">Snack</option>
-                <option value="Cereal">Cereal</option>
-                <option value="Beverage">Beverage</option>
-                <option value="Dairy">Dairy</option>
-                <option value="Dessert">Dessert</option>
-                <option value="Biscuits & Cakes">Biscuits & Cakes</option>
-                <option value="Sauce">Sauce</option>
-                <option value="Spread">Spread</option>
-                <option value="Bread">Bread</option>
-                <option value="Chocolate">Chocolate</option>
-                <option value="Meal">Meal</option>
-                <option value="Canned Food">Canned Food</option>
-              </select>
-            </div>
+      <div className={`transition-all duration-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          
+          {/* LEFT COLUMN: Filter Form */}
+          <section className="lg:col-span-4">
+            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.03)] sticky top-24">
+              <div className="mb-8 relative">
+                <div className="absolute -left-8 top-1 w-1 h-12 bg-brand rounded-r-lg" />
+                <p className="text-[10px] font-bold tracking-[0.25em] text-brand uppercase mb-2">Search Criteria</p>
+                <h2 className="text-2xl font-serif text-gray-900">Health Filters</h2>
+                <p className="text-sm text-gray-500 mt-2 leading-relaxed">Set strict macro limits for your diet. The engine will instantly reject any product that breaks your rules.</p>
+              </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Max Sugar (per 100g/ml)</label>
-              <input 
-                type="number" 
-                value={sugar} 
-                onChange={e => setSugar(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-                placeholder="Optional"
-              />
-            </div>
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-[10px] font-bold tracking-[0.2em] text-gray-400 mb-2 uppercase">Category</label>
+                  <div className="relative group">
+                    <select 
+                      value={category} 
+                      onChange={e => setCategory(e.target.value)}
+                      className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all cursor-pointer"
+                    >
+                      <option value="Snack">Snack</option>
+                      <option value="Cereal">Cereal</option>
+                      <option value="Beverage">Beverage</option>
+                      <option value="Dairy">Dairy</option>
+                      <option value="Dessert">Dessert</option>
+                      <option value="Biscuits & Cakes">Biscuits & Cakes</option>
+                      <option value="Sauce">Sauce</option>
+                      <option value="Spread">Spread</option>
+                      <option value="Bread">Bread</option>
+                      <option value="Chocolate">Chocolate</option>
+                      <option value="Meal">Meal</option>
+                      <option value="Canned Food">Canned Food</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-brand transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                    </div>
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Min Protein (per 100g/ml)</label>
-              <input 
-                type="number" 
-                value={protein} 
-                onChange={e => setProtein(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-                placeholder="Optional"
-              />
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.15em] text-gray-400 mb-2 uppercase truncate">Max Sugar</label>
+                    <input 
+                      type="number" 
+                      value={sugar} 
+                      onChange={e => setSugar(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-gray-300 placeholder:font-normal"
+                      placeholder="g / 100g"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.15em] text-gray-400 mb-2 uppercase truncate">Min Protein</label>
+                    <input 
+                      type="number" 
+                      value={protein} 
+                      onChange={e => setProtein(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-gray-300 placeholder:font-normal"
+                      placeholder="g / 100g"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Max Fat (per 100g/ml)</label>
-              <input 
-                type="number" 
-                value={fat} 
-                onChange={e => setFat(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-                placeholder="Optional"
-              />
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.15em] text-gray-400 mb-2 uppercase truncate">Max Fat</label>
+                    <input 
+                      type="number" 
+                      value={fat} 
+                      onChange={e => setFat(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-gray-300 placeholder:font-normal"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.15em] text-gray-400 mb-2 uppercase truncate">Max Sat Fat</label>
+                    <input 
+                      type="number" 
+                      value={satFat} 
+                      onChange={e => setSatFat(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-gray-300 placeholder:font-normal"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Saturated Max Fat (per 100g/ml)</label>
-              <input 
-                type="number" 
-                value={satFat} 
-                onChange={e => setSatFat(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-                placeholder="Optional"
-              />
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.15em] text-gray-400 mb-2 uppercase truncate">Min Fiber</label>
+                    <input 
+                      type="number" 
+                      value={fiber} 
+                      onChange={e => setFiber(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-gray-300 placeholder:font-normal"
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.15em] text-gray-400 mb-2 uppercase truncate">Max Sodium</label>
+                    <input 
+                      type="number" 
+                      step="0.01"
+                      value={sodium} 
+                      onChange={e => setSodium(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all placeholder:text-gray-300 placeholder:font-normal"
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Min Fiber (per 100g/ml)</label>
-              <input 
-                type="number" 
-                value={fiber} 
-                onChange={e => setFiber(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-                placeholder="Optional"
-              />
+                <button
+                  onClick={handleSearch}
+                  disabled={loading}
+                  className="w-full mt-6 flex items-center justify-center gap-3 px-6 py-4 bg-[#0D0D0D] text-white rounded-xl text-sm font-bold uppercase tracking-widest hover:bg-black disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      Searching Database
+                    </span>
+                  ) : (
+                    <>
+                      <span>Find Better Options</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    </>
+                  )}
+                </button>
+                
+                {error && (
+                  <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 p-3 rounded-lg font-medium">
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    {error}
+                  </div>
+                )}
+              </div>
             </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Max Sodium (per 100g/ml)</label>
-              <input 
-                type="number" 
-                step="0.01"
-                value={sodium} 
-                onChange={e => setSodium(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-                placeholder="Optional"
-              />
-            </div>
-
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="w-full mt-4 px-4 py-3 bg-black text-white text-sm font-bold uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50 transition-colors"
-            >
-              {loading ? 'Searching...' : 'Find Better Options'}
-            </button>
-            
-            {error && <div className="text-xs text-red-500 font-bold uppercase mt-2">{error}</div>}
           </section>
 
-          <section className="md:col-span-2 space-y-6">
-            <h2 className="text-xl font-bold tracking-tighter uppercase mb-6">Recommendations</h2>
-            
+          {/* RIGHT COLUMN: Results */}
+          <section className="lg:col-span-8">
             {alternatives.length === 0 && !loading && !hasSearched && (
-              <div className="border border-dashed border-gray-300 p-12 text-center text-gray-400 uppercase tracking-widest text-sm">
-                Enter current product macros to see alternatives.
+              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center px-6">
+                <div className="w-24 h-24 mb-6 rounded-full bg-brand/5 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-brand/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                </div>
+                <h3 className="text-xl font-serif text-gray-900 mb-2">Ready to explore?</h3>
+                <p className="text-sm text-gray-500 max-w-sm">Enter your nutritional thresholds on the left to discover foods that meet your strict health goals.</p>
               </div>
             )}
 
             {alternatives.length === 0 && !loading && hasSearched && (
-              <div className="border border-dashed border-gray-300 p-12 text-center text-gray-400 text-sm">
-                <span className="uppercase tracking-widest font-bold block mb-2 text-gray-500">No Match Found</span>
-                We are forever expanding the database, but right now we don't have any recommendation that beats these macros. Check back soon!
+              <div className="h-full min-h-[400px] flex flex-col items-center justify-center text-center px-6 bg-white rounded-3xl border border-gray-100 shadow-sm animate-card-enter">
+                <div className="w-20 h-20 mb-6 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center relative">
+                  <div className="absolute inset-0 bg-orange-100 rounded-2xl animate-ping opacity-20" style={{ animationDuration: '3s' }} />
+                  <svg className="w-8 h-8 text-orange-400 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
+                </div>
+                <h3 className="text-xl font-serif text-gray-900 mb-2">No Match Found</h3>
+                <p className="text-sm text-gray-500 max-w-md">We are forever expanding the database, but right now no products match these exact filters. Try relaxing your constraints or check back soon!</p>
               </div>
             )}
 
-            <div className="grid gap-4">
-              {alternatives.map((alt, idx) => (
-                <div key={alt.product_id} className="border border-black flex flex-col md:flex-row">
-                  <div className="bg-black text-white p-6 flex flex-col justify-center items-center w-full md:w-32 shrink-0">
-                    <span className="text-3xl font-bold">{alt.betterment_score}</span>
-                    <span className="text-[10px] uppercase tracking-widest text-center mt-1">Match<br/>Score</span>
-                  </div>
-                  
-                  <div className="p-6 flex-grow flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start gap-4">
-                        <h3 className="text-xl font-bold tracking-tighter uppercase">{alt.name}</h3>
-                        <span className="text-xs font-bold px-2 py-1 bg-gray-200 text-black uppercase tracking-wider shrink-0">
+            {alternatives.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-gray-900">Recommended Products</h3>
+                  <span className="text-xs font-bold bg-gray-100 text-gray-500 px-3 py-1 rounded-full">{alternatives.length} Results</span>
+                </div>
+                
+                {alternatives.map((alt, idx) => (
+                  <div 
+                    key={alt.product_id} 
+                    className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-brand/30 transition-all duration-300 overflow-hidden flex flex-col md:flex-row animate-card-enter"
+                    style={{ animationDelay: `${idx * 75}ms` }}
+                  >
+                    <div className="md:w-32 bg-gray-50 p-6 flex flex-col justify-center items-center shrink-0 border-b md:border-b-0 md:border-r border-gray-100 relative overflow-hidden group-hover:bg-brand/5 transition-colors">
+                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg className="w-16 h-16 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
+                      </div>
+                      <span className="text-3xl font-serif font-bold text-gray-900 relative z-10 group-hover:scale-110 transition-transform duration-500">{alt.betterment_score}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 mt-1 relative z-10 text-center leading-tight">Match<br/>Score</span>
+                    </div>
+                    
+                    <div className="p-6 flex-grow flex flex-col justify-between relative">
+                      <div className="absolute right-6 top-6">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wider border ${getGradeColor(alt.nutriscore_grade)}`}>
                           Nutri-Score {alt.nutriscore_grade}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">{alt.brand}</p>
-                    </div>
-                    
-                    <div className="flex gap-2 flex-wrap mb-3">
-                      {alt.improvements.map((imp: string, i: number) => (
-                        <span key={i} className="px-2 py-1 bg-green-50 text-green-700 border border-green-200 text-xs font-bold uppercase tracking-wider">
-                          {imp}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="text-xs text-gray-400 uppercase tracking-widest font-bold flex flex-wrap gap-x-4 gap-y-1 mt-2 border-t border-gray-100 pt-3">
-                      {lastQuery.current_sugar !== null && <span>Sug: {alt.sugar_g != null ? alt.sugar_g + 'g' : '--'}</span>}
-                      {lastQuery.current_protein !== null && <span>Pro: {alt.protein_g != null ? alt.protein_g + 'g' : '--'}</span>}
-                      {lastQuery.current_fat !== null && <span>Fat: {alt.fat_g != null ? alt.fat_g + 'g' : '--'}</span>}
-                      {lastQuery.current_saturated_fat !== null && <span>Sat Fat: {alt.sat_fat_g != null ? alt.sat_fat_g + 'g' : '--'}</span>}
-                      {lastQuery.current_fiber !== null && <span>Fiber: {alt.fiber_g != null ? alt.fiber_g + 'g' : '--'}</span>}
-                      {lastQuery.current_sodium !== null && <span>Sodium: {alt.sodium_g != null ? alt.sodium_g + 'g' : '--'}</span>}
+                      
+                      <div className="pr-24 mb-4">
+                        <h3 className="text-lg font-bold text-gray-900 tracking-tight leading-tight group-hover:text-brand transition-colors">{alt.name}</h3>
+                        <p className="text-xs text-gray-500 font-medium tracking-wide uppercase mt-1">{alt.brand || 'Unknown Brand'}</p>
+                      </div>
+                      
+                      <div className="flex gap-2 flex-wrap mb-5">
+                        {alt.improvements.map((imp: string, i: number) => (
+                          <span key={i} className="px-2.5 py-1 bg-brand/5 text-brand border border-brand/10 rounded text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                            {imp}
+                          </span>
+                        ))}
+                      </div>
+                      
+                      <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold flex flex-wrap gap-x-5 gap-y-2 mt-auto border-t border-gray-50 pt-4">
+                        {lastQuery.current_sugar !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sug: <span className="text-gray-900">{alt.sugar_g != null ? alt.sugar_g + 'g' : '--'}</span></span>}
+                        {lastQuery.current_protein !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Pro: <span className="text-gray-900">{alt.protein_g != null ? alt.protein_g + 'g' : '--'}</span></span>}
+                        {lastQuery.current_fat !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Fat: <span className="text-gray-900">{alt.fat_g != null ? alt.fat_g + 'g' : '--'}</span></span>}
+                        {lastQuery.current_saturated_fat !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sat Fat: <span className="text-gray-900">{alt.sat_fat_g != null ? alt.sat_fat_g + 'g' : '--'}</span></span>}
+                        {lastQuery.current_fiber !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Fiber: <span className="text-gray-900">{alt.fiber_g != null ? alt.fiber_g + 'g' : '--'}</span></span>}
+                        {lastQuery.current_sodium !== null && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-gray-300"></span> Sod: <span className="text-gray-900">{alt.sodium_g != null ? alt.sodium_g + 'g' : '--'}</span></span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
+
         </div>
       </div>
     </SidebarLayout>

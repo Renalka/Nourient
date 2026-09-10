@@ -21,7 +21,7 @@ class AlternativeRequest(BaseModel):
 @router.post("/find")
 async def find_alternatives(payload: AlternativeRequest):
     try:
-        logger.info(f"Finding alternatives for category: {payload.category}")
+        logger.info(f"Finding alternatives for payload: {payload.model_dump()}")
         results = engine.find_better_alternatives(
             payload.category,
             payload.current_sugar,
