@@ -61,22 +61,22 @@ class AlternativesEngine:
             'tag_contains_1': 'contains',
             'tag_1': off_tag,
             'sort_by': 'nutriscore_score',
-            'page_size': '40'
+            'page_size': '24'
         }
         
         results = []
         try:
             import time
-            def fetch_with_retry(req_params, max_retries=3):
+            def fetch_with_retry(req_params, max_retries=2):
                 for attempt in range(max_retries):
                     try:
-                        resp = requests.get(self.api_url, params=req_params, headers=self.headers, timeout=10)
+                        resp = requests.get(self.api_url, params=req_params, headers=self.headers, timeout=4)
                         if resp.status_code == 200:
                             return resp
                     except Exception as e:
                         logger.warning(f"Request attempt {attempt+1} failed: {e}")
-                    time.sleep(1.0 * (attempt + 1))
-                return requests.get(self.api_url, params=req_params, headers=self.headers, timeout=10)
+                    time.sleep(0.1)
+                return requests.get(self.api_url, params=req_params, headers=self.headers, timeout=4)
 
             response = fetch_with_retry(params)
             
@@ -196,18 +196,16 @@ class AlternativesEngine:
 
             candidates.sort(key=lambda x: x["betterment_score"], reverse=True)
             
-            # Normalize scores to 0-100 based on the top result
+            # Normalize match score from 0-100 relative to the best candidate
             if candidates:
                 max_score = candidates[0]["betterment_score"]
-                if max_score > 0:
-                    for c in candidates:
-                        # Map to a 0-100 range, keeping a minimum floor so nothing is 0 if it matched
-                        normalized = int((c["betterment_score"] / max_score) * 100)
-                        c["betterment_score"] = max(1, normalized)
-                else:
-                    for c in candidates:
-                        c["betterment_score"] = 100
-
+                for c in candidates:
+                    if max_score > 0:
+                        val = (c["betterment_score"] / max_score) * 98 # Top result is 98%
+                        c["betterment_score"] = max(50, int(val)) # Floor at 50%
+                    else:
+                        c["betterment_score"] = 50
+                        
             results = candidates[:10]
             
         except Exception as e:

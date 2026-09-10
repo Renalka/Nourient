@@ -255,12 +255,15 @@ export default function AlternativesPage() {
                     className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-brand/30 transition-all duration-300 overflow-hidden flex flex-col md:flex-row animate-card-enter"
                     style={{ animationDelay: `${idx * 75}ms` }}
                   >
-                    <div className="md:w-32 bg-gray-50 p-6 flex flex-col justify-center items-center shrink-0 border-b md:border-b-0 md:border-r border-gray-100 relative overflow-hidden group-hover:bg-brand/5 transition-colors">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <svg className="w-16 h-16 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
+                    <div className="md:w-32 bg-gray-50 p-6 flex flex-col justify-center items-center shrink-0 border-b md:border-b-0 md:border-r border-gray-100 relative group-hover:bg-brand/5 transition-colors">
+                      <div className="relative w-16 h-16 flex items-center justify-center mb-3">
+                        <svg className="w-full h-full transform -rotate-90 absolute inset-0" viewBox="0 0 36 36">
+                          <path className="text-gray-200" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                          <path className="text-brand transition-all duration-1000 ease-out" strokeDasharray={`${alt.betterment_score}, 100`} strokeWidth="3" stroke="currentColor" fill="none" strokeLinecap="round" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        </svg>
+                        <span className="text-xl font-bold text-gray-900 relative z-10 leading-none">{alt.betterment_score}</span>
                       </div>
-                      <span className="text-3xl font-serif font-bold text-gray-900 relative z-10 group-hover:scale-110 transition-transform duration-500">{alt.betterment_score}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 mt-1 relative z-10 text-center leading-tight">Match<br/>Score</span>
+                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 text-center leading-tight">Match<br/>Score</span>
                     </div>
                     
                     <div className="p-6 flex-grow flex flex-col justify-between relative">
