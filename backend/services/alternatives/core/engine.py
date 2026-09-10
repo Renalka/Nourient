@@ -113,61 +113,50 @@ class AlternativesEngine:
                 if missing_data:
                     continue
                 
-                # Strict Downgrade Protection Phase
-                bad_downgrade = False
-                if current_sugar is not None and sugar_g > max(current_sugar * 1.15, current_sugar + 2.0): bad_downgrade = True
-                if current_protein is not None and protein_g < min(current_protein * 0.85, max(0, current_protein - 1.0)): bad_downgrade = True
-                if current_fat is not None and fat_g > max(current_fat * 1.15, current_fat + 2.0): bad_downgrade = True
-                if current_saturated_fat is not None and sat_fat_g > max(current_saturated_fat * 1.15, current_saturated_fat + 1.0): bad_downgrade = True
-                if current_fiber is not None and fiber_g < min(current_fiber * 0.85, max(0, current_fiber - 1.0)): bad_downgrade = True
-                if current_sodium is not None and sodium_g > max(current_sodium * 1.15, current_sodium + 0.1): bad_downgrade = True
+                # Strict Threshold Filters (Max/Min Bounds)
+                fails_filter = False
+                if current_sugar is not None and sugar_g > current_sugar: fails_filter = True
+                if current_protein is not None and protein_g < current_protein: fails_filter = True
+                if current_fat is not None and fat_g > current_fat: fails_filter = True
+                if current_saturated_fat is not None and sat_fat_g > current_saturated_fat: fails_filter = True
+                if current_fiber is not None and fiber_g < current_fiber: fails_filter = True
+                if current_sodium is not None and sodium_g > current_sodium: fails_filter = True
                 
-                if bad_downgrade:
-                    continue
-                
-                is_better = False
-                if current_sugar is not None and sugar_g < current_sugar: is_better = True
-                if current_protein is not None and protein_g > current_protein: is_better = True
-                if current_fat is not None and fat_g < current_fat: is_better = True
-                if current_saturated_fat is not None and sat_fat_g < current_saturated_fat: is_better = True
-                if current_fiber is not None and fiber_g > current_fiber: is_better = True
-                if current_sodium is not None and sodium_g < current_sodium: is_better = True
-                
-                if not is_better:
+                if fails_filter:
                     continue
                     
                 betterment_score = random.uniform(0.0, 1.0)
                 deltas = []
                 
                 if current_sugar is not None:
-                    improvement = max(0, current_sugar - sugar_g)
+                    improvement = current_sugar - sugar_g
                     betterment_score += improvement * 2.5
-                    if improvement > 0.5: deltas.append(f"{round(improvement, 1)}g less sugar")
+                    if improvement > 0.0: deltas.append(f"{round(improvement, 1)}g below max sugar")
 
                 if current_protein is not None:
-                    improvement = max(0, protein_g - current_protein)
+                    improvement = protein_g - current_protein
                     betterment_score += improvement * 3.0
-                    if improvement > 0.5: deltas.append(f"{round(improvement, 1)}g more protein")
+                    if improvement > 0.0: deltas.append(f"{round(improvement, 1)}g extra protein")
                     
                 if current_fat is not None:
-                    improvement = max(0, current_fat - fat_g)
+                    improvement = current_fat - fat_g
                     betterment_score += improvement * 1.5
-                    if improvement > 0.5: deltas.append(f"{round(improvement, 1)}g less fat")
+                    if improvement > 0.0: deltas.append(f"{round(improvement, 1)}g below max fat")
 
                 if current_saturated_fat is not None:
-                    improvement = max(0, current_saturated_fat - sat_fat_g)
+                    improvement = current_saturated_fat - sat_fat_g
                     betterment_score += improvement * 2.0
-                    if improvement > 0.5: deltas.append(f"{round(improvement, 1)}g less sat fat")
+                    if improvement > 0.0: deltas.append(f"{round(improvement, 1)}g below max sat fat")
 
                 if current_fiber is not None:
-                    improvement = max(0, fiber_g - current_fiber)
+                    improvement = fiber_g - current_fiber
                     betterment_score += improvement * 2.5
-                    if improvement > 0.5: deltas.append(f"{round(improvement, 1)}g more fiber")
+                    if improvement > 0.0: deltas.append(f"{round(improvement, 1)}g extra fiber")
 
                 if current_sodium is not None:
-                    improvement = max(0, current_sodium - sodium_g)
+                    improvement = current_sodium - sodium_g
                     betterment_score += improvement * 10.0
-                    if improvement > 0.05: deltas.append(f"{round(improvement, 2)}g less sodium")
+                    if improvement > 0.0: deltas.append(f"{round(improvement, 2)}g below max sodium")
 
                 if not deltas:
                     deltas.append("Healthier overall profile")

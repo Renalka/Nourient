@@ -93,7 +93,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Sugar (per 100g/ml)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Max Sugar (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={sugar} 
@@ -104,7 +104,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Protein (per 100g/ml)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Min Protein (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={protein} 
@@ -115,7 +115,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Fat (per 100g/ml)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Max Fat (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={fat} 
@@ -126,7 +126,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Saturated Fat (per 100g/ml)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Saturated Max Fat (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={satFat} 
@@ -137,7 +137,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Fiber (per 100g/ml)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Min Fiber (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={fiber} 
@@ -148,7 +148,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Sodium (per 100g/ml)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Max Sodium (per 100g/ml)</label>
               <input 
                 type="number" 
                 step="0.01"
