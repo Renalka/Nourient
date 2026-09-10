@@ -8,7 +8,7 @@ class DetectiveService:
     Queries BigQuery to find complex additives in the ingredient list and returns their scientific risk tier.
     """
     def __init__(self):
-        self.creds = service_account.Credentials.from_service_account_file('gcp-credentials.json')
+        self.creds = service_account.Credentials.from_service_account_file('nourient-a686036afec5.json')
         self.client = bigquery.Client(credentials=self.creds, project=self.creds.project_id)
         # Pointing to the real production data loaded via ETL
         self.table_id = f"{self.creds.project_id}.food_intelligence.ingredient_dictionary_real"

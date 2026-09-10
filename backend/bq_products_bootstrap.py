@@ -7,7 +7,7 @@ PROJECT_ID = "nourient"
 DATASET_ID = "food_intelligence"
 TABLE_ID = "canonical_products"
 
-cred = service_account.Credentials.from_service_account_file('backend/gcp-credentials.json')
+cred = service_account.Credentials.from_service_account_file('backend/nourient-a686036afec5.json')
 client = bigquery.Client(credentials=cred, project=PROJECT_ID)
 
 def setup_products_table():

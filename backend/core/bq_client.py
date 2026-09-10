@@ -9,7 +9,7 @@ class BigQueryService:
     """
     def __init__(self):
         # Authenticate using the Service Account injected by the user
-        self.creds = service_account.Credentials.from_service_account_file('gcp-credentials.json')
+        self.creds = service_account.Credentials.from_service_account_file('nourient-a686036afec5.json')
         self.client = bigquery.Client(credentials=self.creds, project=self.creds.project_id)
         self.table_id = f"{self.creds.project_id}.food_intelligence.canonical_products"
 

@@ -2,7 +2,7 @@ import os
 from google.cloud import bigquery
 from google.oauth2 import service_account
 
-creds = service_account.Credentials.from_service_account_file('gcp-credentials.json')
+creds = service_account.Credentials.from_service_account_file('nourient-a686036afec5.json')
 client = bigquery.Client(credentials=creds, project=creds.project_id)
 dataset_id = f"{client.project}.food_intelligence"
 table_id = f"{dataset_id}.users"

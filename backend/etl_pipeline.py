@@ -5,7 +5,7 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 
 # Ensure credentials are correct
-cred_path = "backend/gcp-credentials.json"
+cred_path = "backend/nourient-a686036afec5.json"
 if not os.path.exists(cred_path):
     print(f"Error: {cred_path} not found.")
     exit(1)
