@@ -80,6 +80,15 @@ export default function AlternativesPage() {
                 <option value="Snack">Snack</option>
                 <option value="Cereal">Cereal</option>
                 <option value="Beverage">Beverage</option>
+                <option value="Dairy">Dairy</option>
+                <option value="Dessert">Dessert</option>
+                <option value="Biscuits & Cakes">Biscuits & Cakes</option>
+                <option value="Sauce">Sauce</option>
+                <option value="Spread">Spread</option>
+                <option value="Bread">Bread</option>
+                <option value="Chocolate">Chocolate</option>
+                <option value="Meal">Meal</option>
+                <option value="Canned Food">Canned Food</option>
               </select>
             </div>
 

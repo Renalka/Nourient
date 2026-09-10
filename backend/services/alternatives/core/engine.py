@@ -37,7 +37,16 @@ class AlternativesEngine:
         tag_map = {
             'snack': 'en:snacks',
             'beverage': 'en:beverages',
-            'cereal': 'en:breakfast-cereals'
+            'cereal': 'en:breakfast-cereals',
+            'dairy': 'en:dairies',
+            'dessert': 'en:desserts',
+            'biscuits & cakes': 'en:biscuits-and-cakes',
+            'sauce': 'en:sauces',
+            'spread': 'en:spreads',
+            'bread': 'en:breads',
+            'chocolate': 'en:chocolates',
+            'meal': 'en:meals',
+            'canned food': 'en:canned-foods'
         }
         off_tag = tag_map.get(category_clean, f"en:{category_clean}s")
 
