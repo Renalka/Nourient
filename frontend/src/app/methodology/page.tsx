@@ -29,7 +29,7 @@ export default function MethodologyPage() {
       <div className="mb-12">
         <h2 className="text-sm font-bold tracking-[0.2em] text-gray-400 uppercase mb-8">The Intelligence Pipeline</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
           {/* Step 1 */}
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-brand transition-colors">
@@ -40,7 +40,7 @@ export default function MethodologyPage() {
             <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 1</span>
             <h3 className="font-bold text-gray-900 mb-3">Vision Extraction</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Optical Character Recognition (OCR) isolates text from noisy environmental backgrounds. The raw string is parsed into a structured ingredient array, handling nested brackets and complex formulations.
+              Optical Character Recognition isolates text from noisy environmental backgrounds. The raw string is parsed into a structured array, extracting distinct ingredients while resolving nested brackets.
             </p>
           </div>
 
@@ -48,12 +48,12 @@ export default function MethodologyPage() {
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-brand transition-colors">
             <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 group-hover:bg-brand transition-colors"></div>
             <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-6 text-brand">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
             </div>
             <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 2</span>
-            <h3 className="font-bold text-gray-900 mb-3">Semantic Decoding</h3>
+            <h3 className="font-bold text-gray-900 mb-3">Detective Engine</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Ingredients are normalized against our 75,000+ vector database. We use a hybrid approach: deterministic alias matching first, falling back to a cosine-similarity semantic search for highly modified chemical names.
+              Ingredients undergo rigorous chemical mapping. Ambiguous names and E-numbers are passed through our 75,000+ vector database to extract toxicity levels, origins, and hidden metabolic disruptors.
             </p>
           </div>
 
@@ -64,9 +64,9 @@ export default function MethodologyPage() {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             </div>
             <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 3</span>
-            <h3 className="font-bold text-gray-900 mb-3">UPF Scoring</h3>
+            <h3 className="font-bold text-gray-900 mb-3">Predictive Scoring</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              A trained regression model evaluates the formulation&apos;s Ultra-Processed Food (UPF) density. It weighs the ratio of whole foods against synthetics, assigning a composite score between 0 and 100.
+              Our proprietary machine learning model analyzes a multi-dimensional nutritional profile—balancing macros against synthetic toxicity—to compute a highly accurate, composite UPF score (0-100).
             </p>
           </div>
 
@@ -74,15 +74,79 @@ export default function MethodologyPage() {
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-brand transition-colors">
             <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 group-hover:bg-brand transition-colors"></div>
             <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-6 text-brand">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
             </div>
             <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 4</span>
-            <h3 className="font-bold text-gray-900 mb-3">TrueLabel Audit</h3>
+            <h3 className="font-bold text-gray-900 mb-3">BioContext Profiling</h3>
             <p className="text-xs text-gray-500 leading-relaxed">
-              Marketing claims are cross-examined against the chemical reality. If a product claims &quot;No Sugar Added&quot; but contains high-glycemic Maltodextrin, the auditor flags it as deceptive.
+              Scores are instantly personalized. A product&apos;s &quot;Metabolic Fit&quot; shifts dynamically based on user health profiles (e.g., heavily penalizing sodium for Hypertension, or sugar for Diabetics).
             </p>
           </div>
 
+          {/* Step 5 */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-brand transition-colors">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 group-hover:bg-brand transition-colors"></div>
+            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-6 text-brand">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 5</span>
+            <h3 className="font-bold text-gray-900 mb-3">TrueLabel Audit</h3>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Front-of-pack marketing claims are cross-examined against the chemical reality. If a product claims &quot;No Sugar Added&quot; but contains high-glycemic Maltodextrin, the auditor exposes the greenwashing.
+            </p>
+          </div>
+
+          {/* Step 6 */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden group hover:border-brand transition-colors">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gray-100 group-hover:bg-brand transition-colors"></div>
+            <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center mb-6 text-brand">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+            </div>
+            <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase mb-2 block">Stage 6</span>
+            <h3 className="font-bold text-gray-900 mb-3">Basket Intelligence</h3>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              External taxonomy databases (like Open Food Facts) are piped through our proprietary scoring engine in real-time. This calculates cumulative metabolic load and discovers cleaner alternatives seamlessly.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Microservice Architecture Section */}
+      <div className="mb-12">
+        <h2 className="text-sm font-bold tracking-[0.2em] text-gray-400 uppercase mb-8">Microservice Architecture</h2>
+        
+        <div className="bg-[#0A100D] p-8 md:p-10 rounded-3xl border border-[#1A2620] shadow-xl relative overflow-hidden">
+          {/* Subtle grid background */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+          
+          <p className="relative z-10 text-gray-400 text-sm leading-relaxed max-w-3xl mb-10">
+            Nourient is powered by a high-performance distributed microservice architecture. Each specialized engine runs independently, orchestrated via a central routing layer to ensure low-latency nutritional intelligence.
+          </p>
+
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {[
+              { id: '01', name: 'Orchestrator Layer', desc: 'Central routing layer managing multi-engine pipeline execution and data aggregation.', color: 'text-brand' },
+              { id: '02', name: 'Vision / Extraction', desc: 'Interfaces with advanced multimodal intelligence to extract structured data from noisy physical labels.', color: 'text-blue-400' },
+              { id: '03', name: 'Detective Engine', desc: 'Executes rapid dictionary lookups and deep chemical mapping against toxicological databases.', color: 'text-yellow-400' },
+              { id: '04', name: 'Scoring Engine', desc: 'Executes our proprietary machine learning models for real-time UPF evaluation and metabolic scoring.', color: 'text-rose-400' },
+              { id: '05', name: 'Alternatives Engine', desc: 'Manages resilient fallback taxonomies and integrates with open-source databases like Open Food Facts.', color: 'text-emerald-400' },
+              { id: '06', name: 'Basket Engine', desc: 'Handles cloud synchronization, metabolic cumulative load analysis, and secure persistent storage.', color: 'text-purple-400' },
+            ].map((service) => (
+              <div key={service.id} className="flex flex-col p-5 bg-white/[0.03] border border-white/10 rounded-2xl hover:bg-white/[0.05] transition-colors">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`text-[10px] font-mono px-2 py-1 bg-white/5 rounded border border-white/10 ${service.color}`}>
+                    {service.id}
+                  </span>
+                  <h4 className="font-bold text-sm text-gray-200">{service.name}</h4>
+                </div>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  {service.desc}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
