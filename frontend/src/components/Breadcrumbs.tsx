@@ -12,15 +12,8 @@ export default function Breadcrumbs() {
   // Build logical trail
   const trail = [{ name: 'Home', href: '/' }];
   
-  // Inject dashboard as the parent for all internal app pages
-  if (['dashboard', 'scanner', 'basket', 'profile'].includes(segments[0])) {
-    trail.push({ name: 'Dashboard', href: '/dashboard' });
-  }
-
-  // Add the actual current path segments (skip 'dashboard' if we just added it as parent)
+  // Add the actual current path segments
   segments.forEach((seg, idx) => {
-    if (seg === 'dashboard' && idx === 0) return;
-    
     const name = seg.charAt(0).toUpperCase() + seg.slice(1);
     const href = `/${segments.slice(0, idx + 1).join('/')}`;
     trail.push({ name, href });

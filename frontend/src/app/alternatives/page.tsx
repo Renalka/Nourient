@@ -11,16 +11,17 @@ export default function AlternativesPage() {
   const [category, setCategory] = useState('Snack');
   const [sugar, setSugar] = useState(15.0);
   const [protein, setProtein] = useState(2.0);
-  const [price, setPrice] = useState(100.0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [alternatives, setAlternatives] = useState<any[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleSearch = async () => {
     setLoading(true);
     setError(null);
     setAlternatives([]);
+    setHasSearched(true);
 
     try {
       const response = await fetch('http://localhost:8006/api/v1/alternatives/find', {
@@ -29,8 +30,7 @@ export default function AlternativesPage() {
         body: JSON.stringify({
           category: category,
           current_sugar: sugar,
-          current_protein: protein,
-          current_price: price
+          current_protein: protein
         }),
       });
 
@@ -71,7 +71,7 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Sugar (g)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Sugar (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={sugar} 
@@ -81,21 +81,11 @@ export default function AlternativesPage() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Protein (g)</label>
+              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Protein (per 100g/ml)</label>
               <input 
                 type="number" 
                 value={protein} 
                 onChange={e => setProtein(Number(e.target.value))}
-                className="w-full border border-black p-2 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs uppercase tracking-widest text-gray-500 mb-1">Price (₹)</label>
-              <input 
-                type="number" 
-                value={price} 
-                onChange={e => setPrice(Number(e.target.value))}
                 className="w-full border border-black p-2 text-sm"
               />
             </div>
@@ -114,9 +104,16 @@ export default function AlternativesPage() {
           <section className="md:col-span-2 space-y-6">
             <h2 className="text-xl font-bold tracking-tighter uppercase mb-6">Recommendations</h2>
             
-            {alternatives.length === 0 && !loading && (
+            {alternatives.length === 0 && !loading && !hasSearched && (
               <div className="border border-dashed border-gray-300 p-12 text-center text-gray-400 uppercase tracking-widest text-sm">
                 Enter current product macros to see alternatives.
+              </div>
+            )}
+
+            {alternatives.length === 0 && !loading && hasSearched && (
+              <div className="border border-dashed border-gray-300 p-12 text-center text-gray-400 text-sm">
+                <span className="uppercase tracking-widest font-bold block mb-2 text-gray-500">No Match Found</span>
+                We are forever expanding the database, but right now we don't have any recommendation that beats these macros. Check back soon!
               </div>
             )}
 
@@ -134,25 +131,16 @@ export default function AlternativesPage() {
                       <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">{alt.brand}</p>
                     </div>
                     
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap mb-3">
                       {alt.improvements.map((imp: string, i: number) => (
                         <span key={i} className="px-2 py-1 bg-green-50 text-green-700 border border-green-200 text-xs font-bold uppercase tracking-wider">
                           {imp}
                         </span>
                       ))}
                     </div>
-                  </div>
-                  
-                  <div className="p-6 border-t md:border-t-0 md:border-l border-gray-200 bg-gray-50 flex flex-col justify-center min-w-[120px]">
-                    <span className="text-xl font-bold">₹{alt.price_inr}</span>
-                    <span className="text-xs text-gray-500 uppercase tracking-widest">Price</span>
-                    
-                    {alt.protein_per_rupee > 0 && (
-                      <div className="mt-4 border-t border-gray-300 pt-2">
-                        <span className="text-sm font-bold block">{alt.protein_per_rupee}g</span>
-                        <span className="text-[9px] text-gray-500 uppercase tracking-widest">Protein per ₹</span>
-                      </div>
-                    )}
+                    <div className="text-xs text-gray-400 uppercase tracking-widest font-bold">
+                      Sugar: {alt.sugar_g}g / 100g &nbsp;&bull;&nbsp; Protein: {alt.protein_g}g / 100g
+                    </div>
                   </div>
                 </div>
               ))}

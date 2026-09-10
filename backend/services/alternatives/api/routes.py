@@ -13,7 +13,6 @@ class AlternativeRequest(BaseModel):
     category: str
     current_sugar: float = 0.0
     current_protein: float = 0.0
-    current_price: float = 0.0
 
 @router.post("/find")
 async def find_alternatives(payload: AlternativeRequest):
@@ -22,8 +21,7 @@ async def find_alternatives(payload: AlternativeRequest):
         results = engine.find_better_alternatives(
             payload.category,
             payload.current_sugar,
-            payload.current_protein,
-            payload.current_price
+            payload.current_protein
         )
         return {"alternatives": results}
     except Exception as e:
