@@ -24,7 +24,8 @@ except Exception as e:
 EXTRACTION_PROMPT = """
 You are a highly accurate food nutrition extraction AI.
 Analyze the provided image of a food product's packaging (ingredients list, nutrition table, or front cover).
-Extract the details meticulously and return them strictly in the following JSON format:
+Extract the details meticulously and return them strictly in the following JSON format.
+CRITICAL INSTRUCTION FOR INGREDIENTS: If an ingredient contains a list of sub-ingredients inside parentheses (e.g. "Enriched flour (wheat flour, malted barley flour, ascorbic acid)"), you MUST flatten them. Create one object for the parent ("Enriched flour") and separate objects for each sub-ingredient ("wheat flour", "malted barley flour", "ascorbic acid"). However, if the parentheses just contain a synonym or clarification without commas (e.g. "Maida (refined flour)"), leave it intact as a single ingredient.
 
 {
   "name": "Product Name (or empty string)",
