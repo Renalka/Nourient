@@ -1,17 +1,11 @@
-import firebase_admin
-from firebase_admin import credentials, auth
-from fastapi import Request, HTTPException, Security
+from firebase_admin import auth
+from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
-import os
+from core.gcp import initialize_firebase_admin
 
-# Initialize Firebase Admin if not already initialized
-if not firebase_admin._apps:
-    # Use the proper Firebase Admin SDK service account key
-    cred = credentials.Certificate('firebase-adminsdk.json')
-    firebase_admin.initialize_app(cred, {
-        'projectId': 'nourient-38381'
-    })
+# Uses the Cloud Run service identity in production rather than a JSON key.
+initialize_firebase_admin()
 
 security = HTTPBearer(auto_error=False)
 

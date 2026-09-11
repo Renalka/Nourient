@@ -1,0 +1,17 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: test-uvicorn
+  labels:
+    cloud.googleapis.com/location: asia-southeast1
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: asia-south1-docker.pkg.dev/nourient-508220/nourient/nourient-api:latest
+            command:
+            - /bin/bash
+            - -c
+            - "uvicorn services.orchestrator.main:app --host 127.0.0.1 --port 8003 > /tmp/out.log 2>&1 & sleep 5 ; cat /tmp/out.log"

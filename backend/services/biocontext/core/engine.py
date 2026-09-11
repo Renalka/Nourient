@@ -1,11 +1,10 @@
 from pydantic import BaseModel
 from typing import Dict, Any
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
+from core.gcp import initialize_firebase_admin
 
-if not firebase_admin._apps:
-    cred = credentials.Certificate('firebase-adminsdk.json')
-    firebase_admin.initialize_app(cred, options={'projectId': 'nourient-38381'})
+initialize_firebase_admin()
 
 class BioContextResult(BaseModel):
     user_name: str

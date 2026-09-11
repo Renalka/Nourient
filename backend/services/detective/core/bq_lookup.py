@@ -1,6 +1,7 @@
 from google.cloud import bigquery
-from google.oauth2 import service_account
 from typing import List, Dict
+from core.gcp import source_bigquery_project_id
+import os
 
 class DetectiveService:
     """
@@ -8,10 +9,9 @@ class DetectiveService:
     Queries BigQuery to find complex additives in the ingredient list and returns their scientific risk tier.
     """
     def __init__(self):
-        self.creds = service_account.Credentials.from_service_account_file('nourient-a686036afec5.json')
-        self.client = bigquery.Client(credentials=self.creds, project=self.creds.project_id)
+        self.client = bigquery.Client(project=os.environ.get("BQ_BILLING_PROJECT_ID"))
         # Pointing to the real production data loaded via ETL
-        self.table_id = f"{self.creds.project_id}.food_intelligence.ingredient_dictionary_real"
+        self.table_id = f"{source_bigquery_project_id()}.food_intelligence.ingredient_dictionary_real"
 
     def analyze_ingredients(self, ingredients: List[Dict]) -> List[Dict]:
         if not ingredients:
@@ -24,7 +24,7 @@ class DetectiveService:
         query_str = " OR ".join([f"LOWER(@ing_{i}) LIKE CONCAT('%', LOWER(name), '%')" for i in range(len(ingredient_names))])
         
         query = f"""
-            SELECT *
+            SELECT name, purpose, confidence_tier, explanation
             FROM `{self.table_id}`
             WHERE {query_str}
         """
@@ -33,7 +33,10 @@ class DetectiveService:
             bigquery.ScalarQueryParameter(f"ing_{i}", "STRING", ing) for i, ing in enumerate(ingredient_names)
         ]
         
-        job_config = bigquery.QueryJobConfig(query_parameters=query_parameters)
+        job_config = bigquery.QueryJobConfig(
+            query_parameters=query_parameters,
+            maximum_bytes_billed=int(os.environ.get("BQ_MAXIMUM_BYTES_BILLED", "50000000")),
+        )
         
         try:
             query_job = self.client.query(query, job_config=job_config)

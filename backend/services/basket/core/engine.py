@@ -2,12 +2,11 @@ from typing import Dict, Any, List
 import json
 from datetime import datetime
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
+from core.gcp import initialize_firebase_admin
 
-# Initialize Firebase Admin if not already initialized
-if not firebase_admin._apps:
-    cred = credentials.Certificate('firebase-adminsdk.json')
-    firebase_admin.initialize_app(cred, options={'projectId': 'nourient-38381'})
+# Uses ADC from the Cloud Run service account in production.
+initialize_firebase_admin()
 
 # Daily Recommended Limits (Generic adult)
 LIMITS = {

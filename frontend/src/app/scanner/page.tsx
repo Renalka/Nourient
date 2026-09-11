@@ -2,10 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
+import { apiUrl } from '@/lib/api';
 import { useRouter } from "next/navigation";
 import SidebarLayout from '@/components/SidebarLayout';
 import AvatarMenu from '@/components/AvatarMenu';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { getScanHistory, saveScanHistory, ScanItem } from '@/lib/firebase/history';
 
 const getGrade = (score: number) => {
   if (score >= 90) return { letter: 'A', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', circle: 'border-green-500', fill: 'bg-green-500' };
@@ -241,7 +243,7 @@ export default function ScannerPage() {
     setError(null);
   };
 
-  const handleNameSave = () => {
+  const handleNameSave = async () => {
     setIsEditingName(false);
     const updatedName = editNameValue.trim();
     if (!updatedName) return;
@@ -255,17 +257,17 @@ export default function ScannerPage() {
     }
     setResult(updatedResult);
 
-    // Update localStorage history
+    // Update Firestore history
     if (user) {
-        const scanKey = `recentScans_${user.uid}`;
-        const historyStr = localStorage.getItem(scanKey);
-        if (historyStr) {
-            const history = JSON.parse(historyStr);
+        try {
+            const history = await getScanHistory(user.uid);
             if (history.length > 0) {
                 // The first item is usually the current scan
                 history[0].name = updatedName;
-                localStorage.setItem(scanKey, JSON.stringify(history));
+                await saveScanHistory(user.uid, history);
             }
+        } catch (e) {
+            console.error("Failed to update name in history", e);
         }
     }
   };
@@ -291,14 +293,14 @@ export default function ScannerPage() {
       const token = await getToken();
 
       const endpoint = scanMode === 'claims'
-        ? 'http://localhost:8003/api/v1/orchestrate/claims-scanner'
+        ? apiUrl('/api/v1/orchestrate/claims-scanner')
         : scanMode === 'front'
-        ? 'http://localhost:8003/api/v1/orchestrate/front-scanner'
+        ? apiUrl('/api/v1/orchestrate/front-scanner')
         : scanMode === 'nutrition'
-            ? 'http://localhost:8003/api/v1/orchestrate/nutrition-scanner'
+            ? apiUrl('/api/v1/orchestrate/nutrition-scanner')
             : (isEnhanced 
-                ? 'http://localhost:8003/api/v1/orchestrate/enhanced_scanner' 
-                : 'http://localhost:8003/api/v1/orchestrate/scanner');
+                ? apiUrl('/api/v1/orchestrate/enhanced_scanner')
+                : apiUrl('/api/v1/orchestrate/scanner'));
 
       const headers: Record<string, string> = {};
       if (token) {
@@ -352,20 +354,11 @@ export default function ScannerPage() {
 
       setResult(data);
       
-      // Save to recent scans history (max 5)
+      // Save to recent scans history (max 100)
       if (user) {
         try {
-          const scanKey = `recentScans_${user.uid}`;
-          const totalKey = `totalScans_${user.uid}`;
+          let history = await getScanHistory(user.uid);
           
-          const historyStr = localStorage.getItem(scanKey);
-          let history = historyStr ? JSON.parse(historyStr) : [];
-          
-          let currentTotal = parseInt(localStorage.getItem(totalKey) || '0', 10);
-          if (currentTotal === 0 && history.length > 0) {
-             currentTotal = history.length;
-          }
-          localStorage.setItem(totalKey, (currentTotal + 1).toString());
           let primaryScore = 0;
           let secondaryScore = 0;
           let primaryLabel = 'Nutri';
@@ -388,7 +381,7 @@ export default function ScannerPage() {
           }
 
           const newScan = {
-            id: Date.now(),
+            id: Date.now().toString(),
             name: data.extracted_data?.name || data.name || (scanMode === 'claims' ? 'Claims Check' : scanMode === 'front' ? 'Front Label' : scanMode === 'nutrition' ? 'Nutrition Facts' : 'Unnamed Product'),
             scanMode: scanMode,
             score: primaryScore,
@@ -402,9 +395,9 @@ export default function ScannerPage() {
           };
           history.unshift(newScan);
           history = history.slice(0, 100); // Keep last 100 for accurate lifetime averages
-          localStorage.setItem(scanKey, JSON.stringify(history));
+          await saveScanHistory(user.uid, history);
         } catch (e) {
-          console.error("Failed to save history", e);
+          console.error("Failed to save history to Firestore", e);
         }
       }
       
@@ -432,7 +425,7 @@ export default function ScannerPage() {
         biocontext: result.biocontext
       };
       
-      const response = await fetch(`http://localhost:8007/api/v1/basket/add`, {
+      const response = await fetch(apiUrl('/api/v1/basket/add', 8007), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

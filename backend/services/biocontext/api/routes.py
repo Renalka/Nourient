@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import logging
 from pydantic import BaseModel
 from typing import Dict, Any
 from services.biocontext.core.engine import BioContextEngine, BioContextResult
+from core.security import get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +27,12 @@ async def evaluate_context(payload: BioContextPayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 class ProfileUpdatePayload(BaseModel):
-    user_id: str
     health_profile: str
 
 @router.post("/update_profile")
-async def update_profile(payload: ProfileUpdatePayload):
+async def update_profile(payload: ProfileUpdatePayload, uid: str = Depends(get_current_user_id)):
     try:
-        engine.update_user_profile(payload.user_id, payload.health_profile)
+        engine.update_user_profile(uid, payload.health_profile)
         return {"status": "success", "message": f"Updated profile to {payload.health_profile}"}
     except Exception as e:
         logger.error(f"Failed to update profile: {e}")

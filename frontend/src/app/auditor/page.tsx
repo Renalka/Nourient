@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from "@/context/AuthContext";
 import SidebarLayout from '@/components/SidebarLayout';
+import { apiUrl } from '@/lib/api';
 
 export default function AuditorPage() {
   const { getToken } = useAuth();
@@ -37,7 +38,7 @@ export default function AuditorPage() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://localhost:8003/api/v1/orchestrate/auditor', {
+      const response = await fetch(apiUrl('/api/v1/orchestrate/auditor'), {
         method: 'POST',
         headers,
         body: formData,

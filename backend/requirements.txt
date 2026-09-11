@@ -56,3 +56,4 @@ uvicorn==0.39.0
 pinecone==5.0.1
 chromadb==0.5.5
 sentence-transformers==3.0.1
+google-cloud-bigquery

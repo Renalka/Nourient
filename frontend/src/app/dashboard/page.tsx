@@ -3,18 +3,20 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
 import SidebarLayout from '@/components/SidebarLayout';
+import { apiUrl } from '@/lib/api';
+import { getScanHistory, saveScanHistory, ScanItem } from "@/lib/firebase/history";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const displayName = user?.email?.split('@')[0] || "Guest";
 
-  const [recentScans, setRecentScans] = React.useState<any[]>([]);
+  const [recentScans, setRecentScans] = React.useState<ScanItem[]>([]);
   const [totalScans, setTotalScans] = React.useState(0);
   const [healthProfile, setHealthProfile] = React.useState("GENERAL");
   const [isEditingProfile, setIsEditingProfile] = React.useState(false);
   const [savingProfile, setSavingProfile] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
-  const [editingScanId, setEditingScanId] = React.useState<number | null>(null);
+  const [editingScanId, setEditingScanId] = React.useState<string | null>(null);
   const [editNameValue, setEditNameValue] = React.useState("");
 
   React.useEffect(() => {
@@ -25,28 +27,24 @@ export default function DashboardPage() {
 
   React.useEffect(() => {
     if (loading || !user) return;
-    try {
-      const scanKey = `recentScans_${user.uid}`;
-      const totalKey = `totalScans_${user.uid}`;
-      
-      const historyStr = localStorage.getItem(scanKey);
-      if (historyStr) {
-        try {
-          const parsed = JSON.parse(historyStr);
-          const scansArray = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-          setRecentScans(scansArray);
-          
-          const storedTotal = parseInt(localStorage.getItem(totalKey) || '0', 10);
-          setTotalScans(Math.max(storedTotal, scansArray.length));
-        } catch(e) { setRecentScans([]); }
+    const loadData = async () => {
+      try {
+        const history = await getScanHistory(user.uid);
+        setRecentScans(history);
+        
+        // Let totalScans be just the history length for simplicity, 
+        // or we could store a separate counter in Firestore if needed.
+        setTotalScans(history.length);
+        
+        const profileKey = `healthProfile_${user.uid}`;
+        const profileStr = localStorage.getItem(profileKey);
+        if (profileStr) setHealthProfile(profileStr);
+        else setHealthProfile("GENERAL");
+      } catch (e) {
+        console.error(e);
       }
-      else setRecentScans([]);
-      
-      const profileKey = `healthProfile_${user.uid}`;
-      const profileStr = localStorage.getItem(profileKey);
-      if (profileStr) setHealthProfile(profileStr);
-      else setHealthProfile("GENERAL");
-    } catch (e) { console.error(e); }
+    };
+    loadData();
     const t = setTimeout(() => setMounted(true), 80);
     return () => clearTimeout(t);
   }, [user, loading]);
@@ -58,10 +56,10 @@ export default function DashboardPage() {
       if (user) {
         localStorage.setItem(`healthProfile_${user.uid}`, profile);
         const token = await user.getIdToken();
-        await fetch('http://localhost:8005/api/v1/biocontext/update_profile', {
+        await fetch(apiUrl('/api/v1/biocontext/update_profile', 8005), {
            method: 'POST',
            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-           body: JSON.stringify({ user_id: user.uid, health_profile: profile })
+           body: JSON.stringify({ health_profile: profile })
         });
       }
     } catch (e) { console.error(e); }
@@ -87,7 +85,7 @@ export default function DashboardPage() {
     : healthProfile === 'HYPERTENSION' ? 'Low Sodium · Heart Health'
     : 'Balanced Diet · Optimal Health';
 
-  const handleSaveScanName = (id: number) => {
+  const handleSaveScanName = async (id: string | number) => {
     setEditingScanId(null);
     const updatedName = editNameValue.trim();
     if (!updatedName) return;
@@ -95,7 +93,7 @@ export default function DashboardPage() {
     const updatedScans = recentScans.map(s => s.id === id ? { ...s, name: updatedName } : s);
     setRecentScans(updatedScans);
     if (user) {
-        localStorage.setItem(`recentScans_${user.uid}`, JSON.stringify(updatedScans));
+        await saveScanHistory(user.uid, updatedScans);
     }
   };
 
@@ -172,7 +170,7 @@ export default function DashboardPage() {
                     const list = s.decoded_additives || s.ingredients || [];
                     return count + list.filter((i: any) => i.risk_level?.toLowerCase() === 'high risk' || i.risk_level?.toLowerCase() === 'high').length;
                 }, 0)), label: 'Red-Flag Additives' },
-                { value: ingredientScans.length > 0 ? `${Math.round((ingredientScans.filter(s => s.processing_score < 40).length / ingredientScans.length) * 100)}%` : '0%', label: 'Ultra-Processed (UPF)' },
+                { value: ingredientScans.length > 0 ? `${Math.round((ingredientScans.filter(s => (s.processing_score ?? 100) < 40).length / ingredientScans.length) * 100)}%` : '0%', label: 'Ultra-Processed (UPF)' },
               ].map((s, i) => (
                 <div
                   key={i}
@@ -347,7 +345,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-400 line-clamp-1">
-                      {scan.ingredients?.length > 0 ? scan.ingredients.map((ing: any) => ing?.name || '').filter(Boolean).join(', ') : 'No ingredients detected'}
+                      {(scan.ingredients?.length || 0) > 0 ? scan.ingredients!.map((ing: any) => ing?.name || '').filter(Boolean).join(', ') : 'No ingredients detected'}
                     </p>
                   </div>
                   <div className="flex items-center justify-end gap-3 shrink-0 z-10 min-w-[140px]">

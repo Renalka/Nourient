@@ -5,19 +5,12 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from services.auditor.api import routes
+from core.cors import configure_cors
 
 app = FastAPI(title="Nourient TrueLabel Auditor API")
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # In production, restrict this to frontend domain
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+configure_cors(app)
 
 app.include_router(routes.router)
 

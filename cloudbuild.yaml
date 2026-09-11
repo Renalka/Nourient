@@ -1,0 +1,13 @@
+substitutions:
+  _IMAGE: "asia-south1-docker.pkg.dev/PROJECT_ID/nourient/nourient-api:latest"
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag=$_IMAGE
+      - --file=Dockerfile
+      - .
+
+images:
+  - $_IMAGE

@@ -1,6 +1,7 @@
 from google.cloud import bigquery
-from google.oauth2 import service_account
 from core.models.product import ExtractedProductData, NutritionInfo, NutritionFact
+from core.gcp import source_bigquery_project_id
+import os
 
 class BigQueryService:
     """
@@ -8,10 +9,12 @@ class BigQueryService:
     Replaces unreliable OCR data with scientifically verified lab data from the cloud.
     """
     def __init__(self):
-        # Authenticate using the Service Account injected by the user
-        self.creds = service_account.Credentials.from_service_account_file('nourient-a686036afec5.json')
-        self.client = bigquery.Client(credentials=self.creds, project=self.creds.project_id)
-        self.table_id = f"{self.creds.project_id}.food_intelligence.canonical_products"
+        # Cloud Run uses Application Default Credentials from its service account.
+        # Query jobs run in BQ_BILLING_PROJECT_ID (the trial project) while data
+        # remains in BQ_DATA_PROJECT_ID (the existing project).
+        billing_project = os.environ.get("BQ_BILLING_PROJECT_ID")
+        self.client = bigquery.Client(project=billing_project)
+        self.table_id = f"{source_bigquery_project_id()}.food_intelligence.canonical_products"
 
     def enrich_product_data(self, product: ExtractedProductData) -> ExtractedProductData:
         """
@@ -20,7 +23,8 @@ class BigQueryService:
         """
         # We search by name or brand to see if we have this product in our verified database
         query = f"""
-            SELECT *
+            SELECT name, brand, ingredients, calories_kcal, protein_g, carbs_g,
+                   added_sugar_g, fiber_g, sodium_mg, sat_fat_g
             FROM `{self.table_id}`
             WHERE LOWER(name) LIKE @search_term
             OR LOWER(brand) LIKE @search_term
@@ -30,7 +34,8 @@ class BigQueryService:
         job_config = bigquery.QueryJobConfig(
             query_parameters=[
                 bigquery.ScalarQueryParameter("search_term", "STRING", f"%{product.name.lower()}%"),
-            ]
+            ],
+            maximum_bytes_billed=int(os.environ.get("BQ_MAXIMUM_BYTES_BILLED", "50000000")),
         )
         
         query_job = self.client.query(query, job_config=job_config)

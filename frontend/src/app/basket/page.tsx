@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import SidebarLayout from '@/components/SidebarLayout';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { apiUrl } from '@/lib/api';
 
 export default function BasketPage() {
   const { user, loading, getToken } = useAuth();
@@ -26,7 +27,7 @@ export default function BasketPage() {
     if (!user) return;
     try {
       const token = await getToken();
-      const res = await fetch(`http://localhost:8007/api/v1/basket/analyze`, {
+      const res = await fetch(apiUrl('/api/v1/basket/analyze', 8007), {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error("Failed to fetch basket");
@@ -58,7 +59,7 @@ export default function BasketPage() {
     if (!user) return;
     try {
       const token = await getToken();
-      await fetch(`http://localhost:8007/api/v1/basket/clear`, { 
+      await fetch(apiUrl('/api/v1/basket/clear', 8007), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -72,7 +73,7 @@ export default function BasketPage() {
     if (!user) return;
     try {
       const token = await getToken();
-      await fetch(`http://localhost:8007/api/v1/basket/remove/${index}`, { 
+      await fetch(apiUrl(`/api/v1/basket/remove/${index}`, 8007), {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

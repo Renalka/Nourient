@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import SidebarLayout from '@/components/SidebarLayout';
 import AvatarMenu from '@/components/AvatarMenu';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { apiUrl } from '@/lib/api';
 
 export default function DictionaryPage() {
   const [query, setQuery] = useState('');
@@ -35,7 +36,7 @@ export default function DictionaryPage() {
       
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:8004/dictionary?q=${encodeURIComponent(query)}`);
+        const response = await fetch(apiUrl(`/dictionary?q=${encodeURIComponent(query)}`, 8004));
         const data = await response.json();
         setResults(data.results || []);
       } catch (err) {

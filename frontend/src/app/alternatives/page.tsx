@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from "@/context/AuthContext";
 import SidebarLayout from '@/components/SidebarLayout';
+import { apiUrl } from '@/lib/api';
 
 export default function AlternativesPage() {
   const { getToken } = useAuth();
@@ -52,7 +53,7 @@ export default function AlternativesPage() {
     setLastQuery(queryPayload);
 
     try {
-      const response = await fetch('http://localhost:8006/api/v1/alternatives/find', {
+      const response = await fetch(apiUrl('/api/v1/alternatives/find', 8006), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(queryPayload),
@@ -90,7 +91,7 @@ export default function AlternativesPage() {
         }
       };
       
-      const evalRes = await fetch('http://localhost:8003/api/v1/orchestrate/evaluate-alternative', {
+      const evalRes = await fetch(apiUrl('/api/v1/orchestrate/evaluate-alternative'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(evalPayload),
@@ -108,7 +109,7 @@ export default function AlternativesPage() {
          }
       };
       
-      const basketRes = await fetch('http://localhost:8007/api/v1/basket/add', {
+      const basketRes = await fetch(apiUrl('/api/v1/basket/add', 8007), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(basketPayload),

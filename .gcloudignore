@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+frontend/node_modules
+.next
+backend/venv
+backend/.venv
+*.log
+*.jpg
+*.png
+*.jpeg
