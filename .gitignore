@@ -54,3 +54,9 @@ dummy.json
 backend/gcp-credentials.json
 backend/nourient-*.json
 *.log
+
+# Temporary Log JSONs
+*logs.json
+*crash*.json
+latest_error.json
+test_result.json
