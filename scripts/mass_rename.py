@@ -12,7 +12,9 @@ skip_dirs = {'.git', 'node_modules', '.next', 'venv', '__pycache__', '.gemini'}
 
 files_changed = 0
 
-for root, dirs, files in os.walk('.'):
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+for root, dirs, files in os.walk(root_dir):
     # Modify dirs in-place to skip hidden/build directories
     dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith('.')]
     

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$0")/.."
+
 # Kill any existing processes on these ports just in case
 lsof -ti :8000,8001,8002,8003,8004,8005,8006,8007,3000 | xargs kill -9 2>/dev/null || true
 

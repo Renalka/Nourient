@@ -1,4 +1,6 @@
 #!/bin/bash
+
+cd "$(dirname "$0")/.."
 export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
 time (
   uvicorn services.extraction.main:app --port 8000 &

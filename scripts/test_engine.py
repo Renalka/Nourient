@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from backend.services.alternatives.core.engine import AlternativesEngine
 import logging
 logging.basicConfig(level=logging.INFO)

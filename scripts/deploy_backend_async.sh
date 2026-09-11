@@ -1,4 +1,6 @@
 #!/bin/bash
+
+cd "$(dirname "$0")/.."
 while true; do
   STATUS=$(gcloud builds list --project=nourient-508220 --limit=1 --format="value(status)")
   echo "Status: $STATUS"
